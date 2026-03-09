@@ -6,18 +6,20 @@ import { toast } from "sonner";
 import {
   TrendingUp, TrendingDown, Minus, Globe, Zap, BarChart2,
   DollarSign, Clock, ExternalLink, Mail, LogIn, LogOut,
-  RefreshCw, ChevronRight, Shield, AlertTriangle, Lightbulb
+  RefreshCw, AlertTriangle, Lightbulb, CheckCircle2,
+  Newspaper, FileText, BrainCircuit, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
-
-function formatDate(d: Date | string) {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
 
 function timeAgo(d: Date | string) {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -48,9 +50,221 @@ function sentimentClass(s: string) {
   return "sentiment-neutral";
 }
 
+// ─── 更新结果摘要弹窗 ─────────────────────────────────────────────────────────
+
+type UpdateResult = {
+  newsCount: number;
+  analysisCount: number;
+  insightGenerated: boolean;
+  outlooksGenerated: number;
+  duration: string;
+  updatedAt: Date;
+};
+
+function UpdateResultDialog({
+  open,
+  onClose,
+  result,
+}: {
+  open: boolean;
+  onClose: () => void;
+  result: UpdateResult | null;
+}) {
+  if (!result) return null;
+
+  const items = [
+    {
+      icon: <Newspaper className="w-5 h-5" />,
+      label: "新增新闻",
+      value: result.newsCount,
+      unit: "条",
+      color: "oklch(0.50 0.10 200)",
+      bg: "oklch(0.95 0.04 200)",
+    },
+    {
+      icon: <FileText className="w-5 h-5" />,
+      label: "新增分析",
+      value: result.analysisCount,
+      unit: "篇",
+      color: "oklch(0.55 0.15 140)",
+      bg: "oklch(0.95 0.05 140)",
+    },
+    {
+      icon: <BrainCircuit className="w-5 h-5" />,
+      label: "市场洞察",
+      value: result.insightGenerated ? "已生成" : "未更新",
+      unit: "",
+      color: result.insightGenerated ? "oklch(0.55 0.15 140)" : "oklch(0.55 0.04 60)",
+      bg: result.insightGenerated ? "oklch(0.95 0.05 140)" : "oklch(0.94 0.02 75)",
+    },
+    {
+      icon: <Globe className="w-5 h-5" />,
+      label: "货币展望",
+      value: result.outlooksGenerated,
+      unit: "种货币",
+      color: "oklch(0.60 0.13 60)",
+      bg: "oklch(0.95 0.05 75)",
+    },
+  ];
+
+  const totalNew = result.newsCount + result.analysisCount;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        {/* 顶部标题区 */}
+        <div className="px-6 pt-6 pb-4" style={{
+          background: "linear-gradient(135deg, oklch(0.22 0.04 55) 0%, oklch(0.28 0.06 60) 100%)"
+        }}>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: "oklch(0.60 0.13 60 / 0.30)" }}>
+              <CheckCircle2 className="w-5 h-5" style={{ color: "oklch(0.82 0.14 65)" }} />
+            </div>
+            <div>
+              <DialogTitle className="text-white text-base font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
+                更新完成
+              </DialogTitle>
+              <p className="text-xs" style={{ color: "oklch(0.72 0.04 70)" }}>
+                耗时 {result.duration} 秒 · {result.updatedAt.toLocaleString("zh-CN", {
+                  month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 数据摘要 */}
+        <div className="px-6 py-5 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {items.map((item) => (
+              <div key={item.label} className="rounded-xl p-3.5 flex items-center gap-3"
+                style={{ background: item.bg }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${item.color} / 0.15`, color: item.color }}>
+                  {item.icon}
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">{item.label}</div>
+                  <div className="font-bold text-sm text-foreground">
+                    {item.value}{item.unit && <span className="text-xs font-normal text-muted-foreground ml-0.5">{item.unit}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 总结文字 */}
+          <div className="rounded-xl p-4 border" style={{
+            background: "oklch(0.97 0.015 78)",
+            borderColor: "oklch(0.88 0.03 70)"
+          }}>
+            <p className="text-sm text-foreground leading-relaxed">
+              {totalNew > 0
+                ? `本次更新共抓取 <strong>${totalNew} 条</strong>新内容（${result.newsCount} 条新闻 + ${result.analysisCount} 篇分析），`
+                : "本次未发现新文章（数据库已是最新），"}
+              {result.insightGenerated
+                ? "AI 市场洞察已重新生成，"
+                : "市场洞察保持不变，"}
+              {result.outlooksGenerated > 0
+                ? `${result.outlooksGenerated} 种货币展望已更新。`
+                : "货币展望未更新。"}
+            </p>
+          </div>
+
+          {/* 风险提示 */}
+          <p className="text-xs text-muted-foreground text-center">
+            页面数据已自动刷新 · 仅供参考，不构成投资建议
+          </p>
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="px-6 pb-5">
+          <Button className="w-full" onClick={onClose}>
+            <CheckCircle2 className="w-4 h-4 mr-1.5" /> 确认
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── 手动更新按钮 ─────────────────────────────────────────────────────────────
+
+function UpdateButton({ user }: { user: any }) {
+  const [showResult, setShowResult] = useState(false);
+  const [lastResult, setLastResult] = useState<UpdateResult | null>(null);
+  const utils = trpc.useUtils();
+
+  const updateMutation = trpc.admin.triggerUpdate.useMutation({
+    onSuccess: async (data) => {
+      setLastResult(data as UpdateResult);
+      setShowResult(true);
+      // 刷新所有相关数据
+      await Promise.all([
+        utils.news.getRecent.invalidate(),
+        utils.news.getBySource.invalidate(),
+        utils.insights.getToday.invalidate(),
+        utils.outlooks.getToday.invalidate(),
+      ]);
+    },
+    onError: (err) => {
+      toast.error(`更新失败：${err.message}`);
+    },
+  });
+
+  if (!user || user.role !== "admin") return null;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => updateMutation.mutate()}
+        disabled={updateMutation.isPending}
+        className="gap-1.5 text-xs border-amber-300/60 hover:bg-amber-50"
+        style={{ color: "oklch(0.45 0.10 55)" }}
+        title="手动触发RSS抓取和AI分析更新"
+      >
+        <RefreshCw className={`w-3 h-3 ${updateMutation.isPending ? "animate-spin" : ""}`} />
+        <span className="hidden sm:inline">
+          {updateMutation.isPending ? "更新中..." : "手动更新"}
+        </span>
+      </Button>
+
+      <UpdateResultDialog
+        open={showResult}
+        onClose={() => setShowResult(false)}
+        result={lastResult}
+      />
+    </>
+  );
+}
+
+// ─── 更新进度提示条 ───────────────────────────────────────────────────────────
+
+function UpdateProgressBanner({ isPending }: { isPending: boolean }) {
+  if (!isPending) return null;
+  return (
+    <div className="fixed top-14 left-0 right-0 z-40 flex items-center justify-center gap-2 py-2 text-xs font-medium"
+      style={{
+        background: "oklch(0.60 0.13 60 / 0.92)",
+        color: "oklch(0.99 0.005 80)",
+        backdropFilter: "blur(8px)",
+      }}>
+      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+      正在抓取最新新闻并生成 AI 分析，请稍候（约 30–60 秒）...
+    </div>
+  );
+}
+
 // ─── 导航栏 ───────────────────────────────────────────────────────────────────
 
-function Navbar({ user, loading, logout }: { user: any; loading: boolean; logout: () => void }) {
+function Navbar({
+  user, loading, logout, isPendingUpdate
+}: {
+  user: any; loading: boolean; logout: () => void; isPendingUpdate: boolean;
+}) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -71,7 +285,7 @@ function Navbar({ user, loading, logout }: { user: any; loading: boolean; logout
             <span className="text-xs text-muted-foreground ml-1.5 hidden sm:inline">外汇资讯与AI分析</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground hidden md:flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {now.toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
@@ -81,6 +295,8 @@ function Navbar({ user, loading, logout }: { user: any; loading: boolean; logout
           ) : user ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground hidden sm:block">{user.name || user.email}</span>
+              {/* 手动更新按钮（仅管理员可见） */}
+              <UpdateButton user={user} />
               <Button variant="outline" size="sm" onClick={logout} className="gap-1.5 text-xs">
                 <LogOut className="w-3 h-3" /> 退出
               </Button>
@@ -106,7 +322,6 @@ function HeroSection() {
     <section className="relative overflow-hidden py-14 md:py-20" style={{
       background: "linear-gradient(160deg, oklch(0.22 0.04 55) 0%, oklch(0.28 0.06 60) 50%, oklch(0.20 0.05 40) 100%)"
     }}>
-      {/* 背景纹理 */}
       <div className="absolute inset-0 opacity-5" style={{
         backgroundImage: "radial-gradient(circle at 25% 25%, oklch(0.80 0.14 65) 0%, transparent 50%), radial-gradient(circle at 75% 75%, oklch(0.70 0.12 60) 0%, transparent 50%)"
       }} />
@@ -157,7 +372,6 @@ function InsightSection() {
           <EmptyState message="今日洞察正在生成中，请稍后刷新..." />
         ) : (
           <div className="space-y-4">
-            {/* 总结 */}
             <div className="glass-card rounded-xl p-5">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -170,7 +384,6 @@ function InsightSection() {
                 </div>
               </div>
             </div>
-            {/* 四格分析 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {sections.map(({ key, label, icon, color }) => {
                 const text = insight[key as keyof typeof insight] as string;
@@ -178,7 +391,7 @@ function InsightSection() {
                   <div key={key} className="glass-card rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-2.5">
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color} / 0.12`, color }}>
+                        style={{ background: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
                         {icon}
                       </div>
                       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
@@ -188,7 +401,6 @@ function InsightSection() {
                 );
               })}
             </div>
-            {/* 交易建议 */}
             {insight.tradingAdvice && (
               <div className="rounded-xl p-4 border" style={{
                 background: "oklch(0.95 0.05 80 / 0.6)",
@@ -222,7 +434,6 @@ function NewsAndAnalysisSection() {
     <section className="py-10" style={{ background: "oklch(0.96 0.015 78)" }}>
       <div className="container">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* 最新新闻 */}
           <div className="lg:col-span-3">
             <SectionTitle icon={<Clock className="w-5 h-5" />} title="最新新闻" subtitle="来自 FXStreet" />
             {newsLoading ? (
@@ -256,8 +467,6 @@ function NewsAndAnalysisSection() {
               </div>
             )}
           </div>
-
-          {/* 专家分析 */}
           <div className="lg:col-span-2">
             <SectionTitle icon={<TrendingUp className="w-5 h-5" />} title="专家分析" subtitle="深度解读" />
             {analysisLoading ? (
@@ -319,7 +528,6 @@ function OutlooksSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {outlooks.map((item) => (
               <div key={item.id} className="glass-card rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
-                {/* 货币头部 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">{currencyFlags[item.currency] || "💱"}</span>
@@ -337,11 +545,9 @@ function OutlooksSection() {
                     {sentimentLabel(item.sentiment)}
                   </div>
                 </div>
-                {/* 展望文字 */}
                 <p className="text-xs leading-relaxed text-foreground/80 flex-1 line-clamp-5">
                   {item.outlook}
                 </p>
-                {/* 来源链接 */}
                 {item.sourceLink && (
                   <a href={item.sourceLink} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-primary hover:underline mt-auto">
@@ -477,10 +683,12 @@ function EmptyState({ message }: { message: string }) {
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
+  const [isPendingUpdate, setIsPendingUpdate] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar user={user} loading={loading} logout={logout} />
+      <Navbar user={user} loading={loading} logout={logout} isPendingUpdate={isPendingUpdate} />
+      <UpdateProgressBanner isPending={isPendingUpdate} />
       <main className="flex-1">
         <HeroSection />
         <InsightSection />

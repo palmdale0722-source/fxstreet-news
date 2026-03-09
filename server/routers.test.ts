@@ -179,5 +179,8 @@ describe("admin routes", () => {
     const result = await caller.admin.triggerUpdate();
     expect(result.insightGenerated).toBe(true);
     expect(result.outlooksGenerated).toBe(8);
+    // 验证新增的 duration 和 updatedAt 字段
+    expect(typeof result.duration).toBe("string");
+    expect(result.updatedAt).toBeInstanceOf(Date);
   });
 });

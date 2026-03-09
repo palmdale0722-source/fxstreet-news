@@ -74,8 +74,14 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") {
         throw new Error("仅管理员可触发更新");
       }
+      const startTime = Date.now();
       const result = await runFullUpdate();
-      return result;
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      return {
+        ...result,
+        duration,
+        updatedAt: new Date(),
+      };
     }),
   }),
 });
