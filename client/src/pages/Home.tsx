@@ -527,7 +527,7 @@ function OutlooksSection() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {outlooks.map((item) => (
-              <div key={item.id} className="glass-card rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
+                <div key={item.id} className="glass-card rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">{currencyFlags[item.currency] || "💱"}</span>
@@ -545,15 +545,9 @@ function OutlooksSection() {
                     {sentimentLabel(item.sentiment)}
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-foreground/80 flex-1 line-clamp-5">
+                <p className="text-xs leading-relaxed text-foreground/80">
                   {item.outlook}
                 </p>
-                {item.sourceLink && (
-                  <a href={item.sourceLink} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-primary hover:underline mt-auto">
-                    <ExternalLink className="w-3 h-3" /> 查看详情
-                  </a>
-                )}
               </div>
             ))}
           </div>

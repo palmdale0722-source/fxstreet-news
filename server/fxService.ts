@@ -198,7 +198,7 @@ ${newsTitles || "暂无最新新闻"}
         outlook: parsed.outlook,
         sentiment: parsed.sentiment as "bullish" | "bearish" | "neutral",
         riskLabel: parsed.riskLabel || CURRENCY_RISK[currency],
-        sourceLink: `https://www.fxstreet.com/currencies/${currency.toLowerCase()}`,
+        sourceLink: null,
       });
       console.log(`[FXService] Outlook generated for ${currency}`);
     } catch (e) {
