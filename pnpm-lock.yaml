@@ -157,6 +157,9 @@ importers:
       imap:
         specifier: ^0.8.19
         version: 0.8.19
+      imap-mkl:
+        specifier: ^1.0.2
+        version: 1.0.2
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -3249,6 +3252,10 @@ packages:
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
+
+  imap-mkl@1.0.2:
+    resolution: {integrity: sha512-mYOOHR/tmJgyueecfXgJ82hsvA2TVT+b8Gy8BDK0Vptc+P6tUdrF0x2/0jgtwkm7yoLlqdLtB54OWWl7Y9pN3w==}
+    engines: {node: '>=0.8.0'}
 
   imap@0.8.19:
     resolution: {integrity: sha512-z5DxEA1uRnZG73UcPA4ES5NSCGnPuuouUx43OPX7KZx1yzq3N8/vx2mtXEShT5inxB3pRgnfG1hijfu7XN2YMw==}
@@ -7804,6 +7811,11 @@ snapshots:
   iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
+
+  imap-mkl@1.0.2:
+    dependencies:
+      readable-stream: 1.1.14
+      utf7: 1.0.2
 
   imap@0.8.19:
     dependencies:

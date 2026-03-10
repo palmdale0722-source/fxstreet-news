@@ -2,7 +2,11 @@
  * IMAP 邮件拉取服务
  * 连接 163 邮箱，拉取未读信号邮件并入库
  */
-import Imap from "imap";
+// imap-mkl 是专为解决 163/126 邮箱 Unsafe Login 问题而修改的 node-imap 分支
+// 它在登录前自动发送 IMAP ID 命令，符合网易邮箱的安全要求
+import { createRequire } from "module";
+const _require = createRequire(import.meta.url);
+const Imap = _require("imap-mkl") as typeof import("imap");
 import { simpleParser } from "mailparser";
 import { getDb } from "./db";
 import { signals } from "../drizzle/schema";
@@ -38,12 +42,15 @@ export async function fetchSignalEmails(
       tlsOptions: { rejectUnauthorized: false },
       connTimeout: 15000,
       authTimeout: 10000,
+      // imap-mkl 需要的 ID 信息，用于通过 163 邮箱的安全验证
+      // 用 as any 绕过标准 imap 类型定义中没有 id 字段的限制
+      ...({ id: { name: "FXStreetSignal", version: "1.0", vendor: "FXStreet" } } as any),
     });
 
     const result: FetchResult = { fetched: 0, inserted: 0, errors: 0 };
 
     imap.once("ready", () => {
-      imap.openBox("INBOX", false, (err, box) => {
+      imap.openBox("INBOX", false, (err: any, box: any) => {
         if (err) {
           imap.end();
           return reject(new Error(`打开收件箱失败: ${err.message}`));
@@ -66,12 +73,12 @@ export async function fetchSignalEmails(
 
         const parsePromises: Promise<void>[] = [];
 
-        fetch.on("message", (msg) => {
+        fetch.on("message", (msg: any) => {
           result.fetched++;
           const chunks: Buffer[] = [];
           let headerChunks: Buffer[] = [];
 
-          msg.on("body", (stream, info) => {
+          msg.on("body", (stream: any, info: any) => {
             const buffers: Buffer[] = [];
             stream.on("data", (chunk: Buffer) => buffers.push(chunk));
             stream.once("end", () => {
@@ -131,7 +138,7 @@ export async function fetchSignalEmails(
           });
         });
 
-        fetch.once("error", (err) => {
+        fetch.once("error", (err: any) => {
           console.error("[IMAP] Fetch error:", err);
           result.errors++;
         });
