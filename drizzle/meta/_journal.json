@@ -15,6 +15,13 @@
       "when": 1773057242669,
       "tag": "0001_whole_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773146047803,
+      "tag": "0002_nebulous_talon",
+      "breakpoints": true
     }
   ]
 }

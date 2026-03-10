@@ -7,8 +7,9 @@ import {
   TrendingUp, TrendingDown, Minus, Globe, Zap, BarChart2,
   DollarSign, Clock, ExternalLink, Mail, LogIn, LogOut,
   RefreshCw, AlertTriangle, Lightbulb, CheckCircle2,
-  Newspaper, FileText, BrainCircuit, X
+  Newspaper, FileText, BrainCircuit, X, Signal
 } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -295,6 +296,12 @@ function Navbar({
             <Clock className="w-3 h-3" />
             {now.toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </span>
+          <Link href="/signals"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
+            style={{ background: "oklch(0.60 0.13 60 / 0.15)", color: "oklch(0.82 0.14 65)", border: "1px solid oklch(0.60 0.13 60 / 0.30)" }}>
+            <Signal className="w-3.5 h-3.5" />
+            交易信号
+          </Link>
           {loading ? (
             <Skeleton className="h-8 w-20" />
           ) : user ? (

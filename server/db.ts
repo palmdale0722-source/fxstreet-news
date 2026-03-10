@@ -1,6 +1,6 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, InsertNews, InsertInsight, InsertOutlook, InsertSubscription } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -135,7 +135,7 @@ export async function upsertOutlook(data: InsertOutlook): Promise<void> {
   await db.insert(outlooks).values(data);
 }
 
-// ─── Subscriptions ────────────────────────────────────────────────────────────
+// ─── Subscriptions ───────────────────────────────────────────────────────────────────────────────
 
 export async function addSubscription(data: InsertSubscription): Promise<{ success: boolean; message: string }> {
   const db = await getDb();
@@ -145,5 +145,65 @@ export async function addSubscription(data: InsertSubscription): Promise<{ succe
     return { success: true, message: "订阅成功！" };
   } catch (e) {
     return { success: false, message: "订阅失败，请稍后重试" };
+  }
+}
+
+// ─── Signals ──────────────────────────────────────────────────────────────────────────────────
+
+export type SignalStatus = "pending" | "executed" | "ignored" | "watching";
+
+export async function getSignals(opts: {
+  status?: SignalStatus;
+  page?: number;
+  pageSize?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const { status, page = 1, pageSize = 20 } = opts;
+  const offset = (page - 1) * pageSize;
+
+  const whereClause = status ? eq(signals.status, status) : undefined;
+
+  const [items, countResult] = await Promise.all([
+    whereClause
+      ? db.select().from(signals).where(whereClause).orderBy(desc(signals.receivedAt)).limit(pageSize).offset(offset)
+      : db.select().from(signals).orderBy(desc(signals.receivedAt)).limit(pageSize).offset(offset),
+    whereClause
+      ? db.select({ count: sql<number>`count(*)` }).from(signals).where(whereClause)
+      : db.select({ count: sql<number>`count(*)` }).from(signals),
+  ]);
+
+  return { items, total: Number(countResult[0]?.count ?? 0) };
+}
+
+export async function updateSignalStatus(id: number, status: SignalStatus): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(signals).set({ status }).where(eq(signals.id, id));
+}
+
+export async function getSignalNotes(signalId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(signalNotes)
+    .where(eq(signalNotes.signalId, signalId))
+    .orderBy(desc(signalNotes.updatedAt));
+}
+
+export async function upsertSignalNote(data: InsertSignalNote): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  // 每个用户对每个信号只保留一条备注
+  const existing = await db.select({ id: signalNotes.id })
+    .from(signalNotes)
+    .where(and(eq(signalNotes.signalId, data.signalId), eq(signalNotes.userId, data.userId)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db.update(signalNotes)
+      .set({ content: data.content, userName: data.userName, updatedAt: new Date() })
+      .where(eq(signalNotes.id, existing[0].id));
+  } else {
+    await db.insert(signalNotes).values(data);
   }
 }

@@ -1,11 +1,17 @@
 import { runFullUpdate } from "./fxService";
+import { fetchSignalEmails } from "./imapService";
 import type { Express } from "express";
 
 let cronTimer: NodeJS.Timeout | null = null;
 let isRunning = false;
 
+let imapTimer: NodeJS.Timeout | null = null;
+let isImapRunning = false;
+
 // 每小时执行一次
 const CRON_INTERVAL_MS = 60 * 60 * 1000;
+// 每 5 分钟拉取一次邮件
+const IMAP_INTERVAL_MS = 5 * 60 * 1000;
 
 export function startCronJobs() {
   console.log("[Cron] Starting scheduled jobs (interval: 1 hour)");
@@ -26,6 +32,48 @@ export function stopCronJobs() {
     clearInterval(cronTimer);
     cronTimer = null;
     console.log("[Cron] Stopped scheduled jobs");
+  }
+  if (imapTimer) {
+    clearInterval(imapTimer);
+    imapTimer = null;
+    console.log("[Cron] Stopped IMAP jobs");
+  }
+}
+
+// 启动 IMAP 邮件拉取定时任务
+export function startImapJobs() {
+  const email = process.env.IMAP_EMAIL;
+  const password = process.env.IMAP_PASSWORD;
+  if (!email || !password) {
+    console.log("[IMAP] IMAP_EMAIL or IMAP_PASSWORD not set, skipping IMAP jobs");
+    return;
+  }
+  console.log(`[IMAP] Starting IMAP polling (interval: 5 min) for ${email}`);
+
+  // 启动后延迟 10s 执行一次
+  setTimeout(() => safeRunImap("startup"), 10000);
+
+  imapTimer = setInterval(() => safeRunImap("scheduled"), IMAP_INTERVAL_MS);
+}
+
+async function safeRunImap(trigger: string) {
+  const email = process.env.IMAP_EMAIL;
+  const password = process.env.IMAP_PASSWORD;
+  if (!email || !password) return;
+  if (isImapRunning) {
+    console.log(`[IMAP] Already running, skipping ${trigger}`);
+    return;
+  }
+  isImapRunning = true;
+  try {
+    const result = await fetchSignalEmails(email, password);
+    if (result.inserted > 0) {
+      console.log(`[IMAP] Fetched ${result.fetched}, inserted ${result.inserted} new signals`);
+    }
+  } catch (e) {
+    console.error(`[IMAP] Fetch error (${trigger}):`, e);
+  } finally {
+    isImapRunning = false;
   }
 }
 

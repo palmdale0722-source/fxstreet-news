@@ -53,6 +53,39 @@ vi.mock("./db", () => ({
     },
   ]),
   addSubscription: vi.fn().mockResolvedValue({ success: true, message: "订阅成功！" }),
+  getSignals: vi.fn().mockResolvedValue({
+    items: [
+      {
+        id: 1,
+        messageId: "<test-msg-001@163.com>",
+        subject: "BUY EURUSD @ 1.0850",
+        body: "BUY EURUSD @ 1.0850\nSL: 1.0800\nTP: 1.0920",
+        fromEmail: "signal@broker.com",
+        receivedAt: new Date("2026-03-10T08:00:00Z"),
+        status: "pending",
+        createdAt: new Date(),
+      },
+    ],
+    total: 1,
+  }),
+  updateSignalStatus: vi.fn().mockResolvedValue(undefined),
+  getSignalNotes: vi.fn().mockResolvedValue([
+    {
+      id: 1,
+      signalId: 1,
+      userId: 1,
+      userName: "Test User",
+      content: "已按信号入场",
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    },
+  ]),
+  upsertSignalNote: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock imapService
+vi.mock("./imapService", () => ({
+  fetchSignalEmails: vi.fn().mockResolvedValue({ fetched: 5, inserted: 2, errors: 0 }),
 }));
 
 // Mock fxService
@@ -182,5 +215,69 @@ describe("admin routes", () => {
     // 验证新增的 duration 和 updatedAt 字段
     expect(typeof result.duration).toBe("string");
     expect(result.updatedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("signals routes", () => {
+  it("signals.list returns paginated signals", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.signals.list({ page: 1, pageSize: 20 });
+    expect(result.items.length).toBe(1);
+    expect(result.total).toBe(1);
+    expect(result.items[0].subject).toBe("BUY EURUSD @ 1.0850");
+  });
+
+  it("signals.list filters by status", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.signals.list({ status: "pending" });
+    expect(result).toBeDefined();
+  });
+
+  it("signals.updateStatus requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.signals.updateStatus({ id: 1, status: "executed" })
+    ).rejects.toThrow();
+  });
+
+  it("signals.updateStatus works for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.signals.updateStatus({ id: 1, status: "executed" });
+    expect(result.success).toBe(true);
+  });
+
+  it("signals.getNotes returns notes for a signal", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.signals.getNotes({ signalId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].content).toBe("已按信号入场");
+  });
+
+  it("signals.upsertNote requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.signals.upsertNote({ signalId: 1, content: "测试备注" })
+    ).rejects.toThrow();
+  });
+
+  it("signals.upsertNote works for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.signals.upsertNote({ signalId: 1, content: "已按信号入场，止损设置正确" });
+    expect(result.success).toBe(true);
+  });
+
+  it("signals.fetchNow requires admin role", async () => {
+    const caller = appRouter.createCaller(createAuthContext("user"));
+    await expect(caller.signals.fetchNow()).rejects.toThrow();
+  });
+
+  it("signals.fetchNow works for admin", async () => {
+    process.env.IMAP_EMAIL = "test@163.com";
+    process.env.IMAP_PASSWORD = "testpassword";
+    const caller = appRouter.createCaller(createAuthContext("admin"));
+    const result = await caller.signals.fetchNow();
+    expect(result.fetched).toBe(5);
+    expect(result.inserted).toBe(2);
+    expect(result.fetchedAt).toBeInstanceOf(Date);
   });
 });

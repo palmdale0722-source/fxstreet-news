@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { startCronJobs, registerAdminRoutes } from "../cronJobs";
+import { startCronJobs, startImapJobs, registerAdminRoutes } from "../cronJobs";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -64,6 +64,7 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Start cron jobs after server is ready
     startCronJobs();
+    startImapJobs();
   });
 }
 

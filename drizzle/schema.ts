@@ -80,3 +80,36 @@ export const subscriptions = mysqlTable("subscriptions", {
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+// ─── 交易信号表 ───────────────────────────────────────────────────────────────
+// 每封从 163 邮箱拉取的信号邮件对应一条记录
+export const signals = mysqlTable("signals", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: varchar("messageId", { length: 512 }).notNull().unique(), // 邮件 Message-ID，用于去重
+  subject: varchar("subject", { length: 512 }).notNull(),
+  body: text("body").notNull(),                  // 纯文本正文
+  fromEmail: varchar("fromEmail", { length: 320 }),
+  receivedAt: timestamp("receivedAt").notNull(), // 邮件接收时间
+  status: mysqlEnum("status", ["pending", "executed", "ignored", "watching"])
+    .default("pending")
+    .notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Signal = typeof signals.$inferSelect;
+export type InsertSignal = typeof signals.$inferInsert;
+
+// ─── 信号备注表 ───────────────────────────────────────────────────────────────
+// 每条信号可有多人填写备注，每人最多一条（upsert），记录最后修改时间
+export const signalNotes = mysqlTable("signal_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  signalId: int("signalId").notNull(),
+  userId: int("userId").notNull(),
+  userName: varchar("userName", { length: 255 }),  // 冗余存储，方便展示
+  content: text("content").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SignalNote = typeof signalNotes.$inferSelect;
+export type InsertSignalNote = typeof signalNotes.$inferInsert;

@@ -41,3 +41,20 @@
 
 ## Bug 修复
 - [x] 手动更新后前端新文章未刷新（invalidate 未生效）
+
+## 交易信号模块
+- [x] 数据库：新增 signals 表（id, subject, body, fromEmail, receivedAt, status, createdAt）
+- [x] 数据库：新增 signal_notes 表（id, signalId, userId, content, updatedAt）
+- [x] 后端：IMAP 服务，连接 163 邮箱拉取新邮件并入库（imap.163.com:993）
+- [x] 后端：定时任务每5分钟拉取一次新邮件
+- [x] 后端：tRPC signals.list（分页、状态筛选）
+- [x] 后端：tRPC signals.updateStatus（更新信号状态：pending/executed/ignored/watching）
+- [x] 后端：tRPC signals.upsertNote（新增/更新备注，记录操作人和时间）
+- [x] 后端：tRPC signals.fetchNow（手动触发立即拉取）
+- [x] 前端：导航栏添加“交易信号”入口
+- [x] 前端：/signals 页面，展示信号列表（主题、正文、时间、状态标签）
+- [x] 前端：状态筛选栏（全部/待处理/已执行/已忽略/观察中）
+- [x] 前端：每条信号可展开查看完整正文
+- [x] 前端：备注编辑区（多人协作，显示最后修改人和时间）
+- [x] 前端：手动拉取按钮（管理员可见）
+- [x] 配置 163 邮箱 IMAP 密鑰（IMAP_EMAIL + IMAP_PASSWORD）
