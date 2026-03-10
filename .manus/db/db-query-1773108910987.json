@@ -1,0 +1,25 @@
+{
+  "query": "SELECT date, generatedAt FROM insights ORDER BY generatedAt DESC LIMIT 3;\nSELECT date, currency, generatedAt FROM outlooks ORDER BY generatedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT date, generatedAt FROM insights ORDER BY generatedAt DESC LIMIT 3;\nSELECT date, currency, generatedAt FROM outlooks ORDER BY generatedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "date": "2026-03-10",
+      "generatedAt": "2026-03-10 02:10:32"
+    },
+    {
+      "date": "2026-03-09",
+      "generatedAt": "2026-03-09 18:29:13"
+    }
+  ],
+  "messages": [
+    "date\tcurrency\tgeneratedAt",
+    "2026-03-10\tCAD\t2026-03-10 02:11:17",
+    "2026-03-10\tCHF\t2026-03-10 02:11:12",
+    "2026-03-10\tNZD\t2026-03-10 02:11:05",
+    "2026-03-10\tGBP\t2026-03-10 02:10:56",
+    "2026-03-10\tAUD\t2026-03-10 02:10:52"
+  ],
+  "stdout": "date\tgeneratedAt\n2026-03-10\t2026-03-10 02:10:32\n2026-03-09\t2026-03-09 18:29:13\ndate\tcurrency\tgeneratedAt\n2026-03-10\tCAD\t2026-03-10 02:11:17\n2026-03-10\tCHF\t2026-03-10 02:11:12\n2026-03-10\tNZD\t2026-03-10 02:11:05\n2026-03-10\tGBP\t2026-03-10 02:10:56\n2026-03-10\tAUD\t2026-03-10 02:10:52\n",
+  "stderr": "",
+  "execution_time_ms": 1848
+}

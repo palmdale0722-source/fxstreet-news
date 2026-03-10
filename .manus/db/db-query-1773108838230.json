@@ -1,0 +1,27 @@
+{
+  "query": "\nSELECT source, COUNT(*) as total, MAX(publishedAt) as latest FROM news GROUP BY source;\nSELECT id, title, source, publishedAt FROM news ORDER BY publishedAt DESC LIMIT 5;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute \nSELECT source, COUNT(*) as total, MAX(publishedAt) as latest FROM news GROUP BY source;\nSELECT id, title, source, publishedAt FROM news ORDER BY publishedAt DESC LIMIT 5;\n",
+  "rows": [
+    {
+      "source": "Analysis",
+      "total": "33",
+      "latest": "2026-03-09 17:22:07"
+    },
+    {
+      "source": "News",
+      "total": "73",
+      "latest": "2026-03-10 01:21:50"
+    }
+  ],
+  "messages": [
+    "id\ttitle\tsource\tpublishedAt",
+    "120001\tEUR/USD softens below 1.1650 as Middle East turmoil boosts US Dollar\tNews\t2026-03-10 01:21:50",
+    "120002\tSilver Price Forecast: XAG/USD rises to near $87.50 as Oil prices ease from highs\tNews\t2026-03-10 01:16:48",
+    "120003\tPBOC sets USD/CNY reference rate at 6.8982 vs. 6.9158 previous\tNews\t2026-03-10 01:16:05",
+    "120004\tWhen is the China’s Trade Balance and how it could affect AUD/USD?\tNews\t2026-03-10 00:26:15",
+    "120005\tJapan’s Katayama: G7 energy ministers are expected to discuss the process of oil reserve release\tNews\t2026-03-10 00:11:28"
+  ],
+  "stdout": "source\ttotal\tlatest\nAnalysis\t33\t2026-03-09 17:22:07\nNews\t73\t2026-03-10 01:21:50\nid\ttitle\tsource\tpublishedAt\n120001\tEUR/USD softens below 1.1650 as Middle East turmoil boosts US Dollar\tNews\t2026-03-10 01:21:50\n120002\tSilver Price Forecast: XAG/USD rises to near $87.50 as Oil prices ease from highs\tNews\t2026-03-10 01:16:48\n120003\tPBOC sets USD/CNY reference rate at 6.8982 vs. 6.9158 previous\tNews\t2026-03-10 01:16:05\n120004\tWhen is the China’s Trade Balance and how it could affect AUD/USD?\tNews\t2026-03-10 00:26:15\n120005\tJapan’s Katayama: G7 energy ministers are expected to discuss the process of oil reserve release\tNews\t2026-03-10 00:11:28\n",
+  "stderr": "",
+  "execution_time_ms": 1931
+}

@@ -190,23 +190,28 @@ function UpdateResultDialog({
 }
 
 // ─── 手动更新按钮 ─────────────────────────────────────────────────────────────
-
 function UpdateButton({ user }: { user: any }) {
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState<UpdateResult | null>(null);
   const utils = trpc.useUtils();
-
   const updateMutation = trpc.admin.triggerUpdate.useMutation({
     onSuccess: async (data) => {
       setLastResult(data as UpdateResult);
-      setShowResult(true);
-      // 刷新所有相关数据
+      // 先 invalidate 所有相关缓存（精确匹配 input 参数），再 refetch 强制重新请求
       await Promise.all([
-        utils.news.getRecent.invalidate(),
-        utils.news.getBySource.invalidate(),
+        utils.news.getRecent.invalidate({ limit: 8 }),
+        utils.news.getBySource.invalidate({ limit: 5 }),
         utils.insights.getToday.invalidate(),
         utils.outlooks.getToday.invalidate(),
       ]);
+      // 强制 refetch，确保数据更新
+      await Promise.all([
+        utils.news.getRecent.refetch({ limit: 8 }),
+        utils.news.getBySource.refetch({ limit: 5 }),
+        utils.insights.getToday.refetch(),
+        utils.outlooks.getToday.refetch(),
+      ]);
+      setShowResult(true);
     },
     onError: (err) => {
       toast.error(`更新失败：${err.message}`);
