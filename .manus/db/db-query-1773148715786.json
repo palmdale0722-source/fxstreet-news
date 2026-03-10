@@ -1,0 +1,46 @@
+{
+  "query": "SELECT COUNT(*) as total FROM signals;\nSELECT id, subject, LEFT(body, 100) as body_preview, fromEmail, receivedAt \nFROM signals \nORDER BY receivedAt DESC \nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT COUNT(*) as total FROM signals;\nSELECT id, subject, LEFT(body, 100) as body_preview, fromEmail, receivedAt \nFROM signals \nORDER BY receivedAt DESC \nLIMIT 10;",
+  "rows": [
+    {
+      "total": "969"
+    },
+    {
+      "total": "id\tsubject\tbody_preview\tfromEmail\treceivedAt"
+    },
+    {
+      "total": "1219\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t3178903@qq.com\t2026-03-10 12:59:59"
+    },
+    {
+      "total": "1218\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 15:00 sell strong\tpalmdale@126.com\t2026-03-10 12:00:01"
+    },
+    {
+      "total": "1217\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tTrend Follower BUY: NZDUSD (PERIOD_M15)\t3178903@qq.com\t2026-03-10 11:59:59"
+    },
+    {
+      "total": "1216\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 14:00 sell strong\tpalmdale@126.com\t2026-03-10 11:00:01"
+    },
+    {
+      "total": "1215\tTrendWave Enhanced Alert\tGBPJPY => 2026.03.10 12:45 sell strong\t3178903@qq.com\t2026-03-10 09:44:59"
+    },
+    {
+      "total": "1214\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 12:00 buy strong\t3178903@qq.com\t2026-03-10 09:00:00"
+    },
+    {
+      "total": "1213\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 12:00 sell strong\tpalmdale@126.com\t2026-03-10 09:00:00"
+    },
+    {
+      "total": "1212\tTrendWave Enhanced Alert\tGBPUSD => 2026.03.10 11:45 sell strong\tpalmdale@126.com\t2026-03-10 08:45:01"
+    },
+    {
+      "total": "1211\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 11:00 sell weak\tpalmdale@126.com\t2026-03-10 08:00:01"
+    },
+    {
+      "total": "1210\tTrendWave Enhanced Alert\tEURGBP => 2026.03.10 10:45 buy weak\t3178903@qq.com\t2026-03-10 07:45:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n969\nid\tsubject\tbody_preview\tfromEmail\treceivedAt\n1219\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t3178903@qq.com\t2026-03-10 12:59:59\n1218\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 15:00 sell strong\tpalmdale@126.com\t2026-03-10 12:00:01\n1217\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tTrend Follower BUY: NZDUSD (PERIOD_M15)\t3178903@qq.com\t2026-03-10 11:59:59\n1216\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 14:00 sell strong\tpalmdale@126.com\t2026-03-10 11:00:01\n1215\tTrendWave Enhanced Alert\tGBPJPY => 2026.03.10 12:45 sell strong\t3178903@qq.com\t2026-03-10 09:44:59\n1214\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 12:00 buy strong\t3178903@qq.com\t2026-03-10 09:00:00\n1213\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 12:00 sell strong\tpalmdale@126.com\t2026-03-10 09:00:00\n1212\tTrendWave Enhanced Alert\tGBPUSD => 2026.03.10 11:45 sell strong\tpalmdale@126.com\t2026-03-10 08:45:01\n1211\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 11:00 sell weak\tpalmdale@126.com\t2026-03-10 08:00:01\n1210\tTrendWave Enhanced Alert\tEURGBP => 2026.03.10 10:45 buy weak\t3178903@qq.com\t2026-03-10 07:45:00\n",
+  "stderr": "",
+  "execution_time_ms": 1912
+}

@@ -1,0 +1,13 @@
+{
+  "query": "DELETE FROM signal_notes;\nDELETE FROM signals;\nSELECT COUNT(*) as remaining FROM signals;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute DELETE FROM signal_notes;\nDELETE FROM signals;\nSELECT COUNT(*) as remaining FROM signals;",
+  "rows": [
+    {
+      "remaining": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "remaining\n0\n",
+  "stderr": "",
+  "execution_time_ms": 1953
+}

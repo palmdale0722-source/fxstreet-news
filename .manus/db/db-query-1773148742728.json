@@ -1,0 +1,49 @@
+{
+  "query": "-- 检查是否还有乱码：body 中只含 base64 字符且不含空格的记录\nSELECT COUNT(*) as possible_garbled \nFROM signals \nWHERE body REGEXP '^[A-Za-z0-9+/=]+$' AND LENGTH(body) > 10;\n\n-- 查看最早的5条和最新的5条，确认内容正常\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt FROM signals ORDER BY receivedAt ASC LIMIT 5;\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt FROM signals ORDER BY receivedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute -- 检查是否还有乱码：body 中只含 base64 字符且不含空格的记录\nSELECT COUNT(*) as possible_garbled \nFROM signals \nWHERE body REGEXP '^[A-Za-z0-9+/=]+$' AND LENGTH(body) > 10;\n\n-- 查看最早的5条和最新的5条，确认内容正常\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt FROM signals ORDER BY receivedAt ASC LIMIT 5;\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt FROM signals ORDER BY receivedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "possible_garbled": "0"
+    },
+    {
+      "possible_garbled": "id\tsubject\tbody_preview\treceivedAt"
+    },
+    {
+      "possible_garbled": "1021\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 sell\t2026-02-25 14:34:29"
+    },
+    {
+      "possible_garbled": "1022\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 sell\t2026-02-25 14:34:45"
+    },
+    {
+      "possible_garbled": "1023\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 buy\t2026-02-25 14:34:52"
+    },
+    {
+      "possible_garbled": "1024\tTrendWave Alert\tUSDCHF => 2026.02.25 16:34 sell\t2026-02-25 14:34:59"
+    },
+    {
+      "possible_garbled": "1025\tTrendWave Alert\tUSDCHF => 2026.02.25 16:35 buy\t2026-02-25 14:35:03"
+    },
+    {
+      "possible_garbled": "id\tsubject\tbody_preview\treceivedAt"
+    },
+    {
+      "possible_garbled": "1219\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t2026-03-10 12:59:59"
+    },
+    {
+      "possible_garbled": "1218\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 15:00 sell strong\t2026-03-10 12:00:01"
+    },
+    {
+      "possible_garbled": "1217\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tTrend Follower BUY: NZDUSD (PERIOD_M15)\t2026-03-10 11:59:59"
+    },
+    {
+      "possible_garbled": "1216\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 14:00 sell strong\t2026-03-10 11:00:01"
+    },
+    {
+      "possible_garbled": "1215\tTrendWave Enhanced Alert\tGBPJPY => 2026.03.10 12:45 sell strong\t2026-03-10 09:44:59"
+    }
+  ],
+  "messages": [],
+  "stdout": "possible_garbled\n0\nid\tsubject\tbody_preview\treceivedAt\n1021\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 sell\t2026-02-25 14:34:29\n1022\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 sell\t2026-02-25 14:34:45\n1023\tTrendWave Alert\tAUDUSD => 2026.02.25 16:34 buy\t2026-02-25 14:34:52\n1024\tTrendWave Alert\tUSDCHF => 2026.02.25 16:34 sell\t2026-02-25 14:34:59\n1025\tTrendWave Alert\tUSDCHF => 2026.02.25 16:35 buy\t2026-02-25 14:35:03\nid\tsubject\tbody_preview\treceivedAt\n1219\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t2026-03-10 12:59:59\n1218\tTrendWave Enhanced Alert\tAUDNZD => 2026.03.10 15:00 sell strong\t2026-03-10 12:00:01\n1217\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tTrend Follower BUY: NZDUSD (PERIOD_M15)\t2026-03-10 11:59:59\n1216\tTrendWave Enhanced Alert\tEURUSD => 2026.03.10 14:00 sell strong\t2026-03-10 11:00:01\n1215\tTrendWave Enhanced Alert\tGBPJPY => 2026.03.10 12:45 sell strong\t2026-03-10 09:44:59\n",
+  "stderr": "",
+  "execution_time_ms": 1916
+}

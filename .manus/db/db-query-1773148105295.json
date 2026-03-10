@@ -1,0 +1,31 @@
+{
+  "query": "SELECT COUNT(*) as total FROM signals;\nSELECT id, subject, LEFT(body, 80) as body_preview, fromEmail, receivedAt FROM signals ORDER BY receivedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT COUNT(*) as total FROM signals;\nSELECT id, subject, LEFT(body, 80) as body_preview, fromEmail, receivedAt FROM signals ORDER BY receivedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "total": "969"
+    },
+    {
+      "total": "id\tsubject\tbody_preview\tfromEmail\treceivedAt"
+    },
+    {
+      "total": "101\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t3178903@qq.com\t2026-03-10 12:59:59"
+    },
+    {
+      "total": "98\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMTU6MDAgc2VsbCBzdHJvbmc=\tpalmdale@126.com\t2026-03-10 12:00:01"
+    },
+    {
+      "total": "99\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBOWkRVU0QgKFBFUklPRF9NMTUp\t3178903@qq.com\t2026-03-10 11:59:59"
+    },
+    {
+      "total": "97\tTrendWave Enhanced Alert\tRVVSVVNEID0+IDIwMjYuMDMuMTAgMTQ6MDAgc2VsbCBzdHJvbmc=\tpalmdale@126.com\t2026-03-10 11:00:01"
+    },
+    {
+      "total": "96\tTrendWave Enhanced Alert\tR0JQSlBZID0+IDIwMjYuMDMuMTAgMTI6NDUgc2VsbCBzdHJvbmc=\t3178903@qq.com\t2026-03-10 09:44:59"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n969\nid\tsubject\tbody_preview\tfromEmail\treceivedAt\n101\tTrendWave Enhanced Alert\tUSDCHF => 2026.03.10 16:00 buy weak\t3178903@qq.com\t2026-03-10 12:59:59\n98\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMTU6MDAgc2VsbCBzdHJvbmc=\tpalmdale@126.com\t2026-03-10 12:00:01\n99\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBOWkRVU0QgKFBFUklPRF9NMTUp\t3178903@qq.com\t2026-03-10 11:59:59\n97\tTrendWave Enhanced Alert\tRVVSVVNEID0+IDIwMjYuMDMuMTAgMTQ6MDAgc2VsbCBzdHJvbmc=\tpalmdale@126.com\t2026-03-10 11:00:01\n96\tTrendWave Enhanced Alert\tR0JQSlBZID0+IDIwMjYuMDMuMTAgMTI6NDUgc2VsbCBzdHJvbmc=\t3178903@qq.com\t2026-03-10 09:44:59\n",
+  "stderr": "",
+  "execution_time_ms": 1832
+}
