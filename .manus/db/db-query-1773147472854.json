@@ -1,0 +1,127 @@
+{
+  "query": "\n-- 查看当前乱码数据\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt \nFROM signals \nORDER BY receivedAt DESC \nLIMIT 20;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute \n-- 查看当前乱码数据\nSELECT id, subject, LEFT(body, 80) as body_preview, receivedAt \nFROM signals \nORDER BY receivedAt DESC \nLIMIT 20;\n",
+  "rows": [
+    {
+      "id": "49",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "QVVETlpEID0+IDIwMjYuMDMuMTAgMTU6MDAgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 12:00:01"
+    },
+    {
+      "id": "50",
+      "subject": "Trend Follower BUY: NZDUSD (PERIOD_M15)",
+      "body_preview": "VHJlbmQgRm9sbG93ZXIgQlVZOiBOWkRVU0QgKFBFUklPRF9NMTUp",
+      "receivedAt": "2026-03-10 11:59:59"
+    },
+    {
+      "id": "48",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "RVVSVVNEID0+IDIwMjYuMDMuMTAgMTQ6MDAgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 11:00:01"
+    },
+    {
+      "id": "47",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "R0JQSlBZID0+IDIwMjYuMDMuMTAgMTI6NDUgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 09:44:59"
+    },
+    {
+      "id": "46",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "RVVSVVNEID0+IDIwMjYuMDMuMTAgMTI6MDAgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 09:00:00"
+    },
+    {
+      "id": "45",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "VVNEQ0hGID0+IDIwMjYuMDMuMTAgMTI6MDAgYnV5IHN0cm9uZw==",
+      "receivedAt": "2026-03-10 09:00:00"
+    },
+    {
+      "id": "44",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "R0JQVVNEID0+IDIwMjYuMDMuMTAgMTE6NDUgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 08:45:01"
+    },
+    {
+      "id": "42",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "QVVETlpEID0+IDIwMjYuMDMuMTAgMTE6MDAgc2VsbCB3ZWFr",
+      "receivedAt": "2026-03-10 08:00:01"
+    },
+    {
+      "id": "43",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "RVVSR0JQID0+IDIwMjYuMDMuMTAgMTA6NDUgYnV5IHdlYWs=",
+      "receivedAt": "2026-03-10 07:45:00"
+    },
+    {
+      "id": "41",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "QVVETlpEID0+IDIwMjYuMDMuMTAgMTA6MTUgc2VsbCB3ZWFr",
+      "receivedAt": "2026-03-10 07:15:01"
+    },
+    {
+      "id": "40",
+      "subject": "Trend Follower BUY: GBPUSD (PERIOD_M15)",
+      "body_preview": "VHJlbmQgRm9sbG93ZXIgQlVZOiBHQlBVU0QgKFBFUklPRF9NMTUp",
+      "receivedAt": "2026-03-10 06:15:01"
+    },
+    {
+      "id": "39",
+      "subject": "Trend Follower SELL: AUDUSD (PERIOD_M15)",
+      "body_preview": "VHJlbmQgRm9sbG93ZXIgU0VMTDogQVVEVVNEIChQRVJJT0RfTTE1KQ==",
+      "receivedAt": "2026-03-10 06:00:12"
+    },
+    {
+      "id": "38",
+      "subject": "Trend Follower BUY: AUDUSD (PERIOD_H1)",
+      "body_preview": "VHJlbmQgRm9sbG93ZXIgQlVZOiBBVURVU0QgKFBFUklPRF9IMSk=",
+      "receivedAt": "2026-03-10 06:00:11"
+    },
+    {
+      "id": "37",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "QVVETlpEID0+IDIwMjYuMDMuMTAgMDg6MDAgc2VsbCBzdHJvbmc=",
+      "receivedAt": "2026-03-10 05:00:01"
+    },
+    {
+      "id": "34",
+      "subject": "Trend Follower BUY: USDCHF (PERIOD_M15)",
+      "body_preview": "VHJlbmQgRm9sbG93ZXIgQlVZOiBVU0RDSEYgKFBFUklPRF9NMTUp",
+      "receivedAt": "2026-03-10 04:44:59"
+    },
+    {
+      "id": "35",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "WEFVVVNEID0+IDIwMjYuMDMuMTAgMDY6MDUgc2VsbCB3ZWFr",
+      "receivedAt": "2026-03-10 03:06:22"
+    },
+    {
+      "id": "33",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "RVVSR0JQID0+IDIwMjYuMDMuMTAgMDY6MDUgYnV5IHN0cm9uZw==",
+      "receivedAt": "2026-03-10 03:06:11"
+    },
+    {
+      "id": "32",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "QVVETlpEID0+IDIwMjYuMDMuMTAgMDY6MDAgc2VsbCB3ZWFr",
+      "receivedAt": "2026-03-10 03:00:01"
+    },
+    {
+      "id": "31",
+      "subject": "TrendWave Enhanced Alert",
+      "body_preview": "WEFVVVNEID0+IDIwMjYuMDMuMTAgMDY6MDAgc2VsbCB3ZWFr",
+      "receivedAt": "2026-03-10 03:00:00"
+    }
+  ],
+  "messages": [
+    "36\t您的一个设备激活槽已到期并被移除\t<p>=E6=82=A8=E5=A5=BD=EF=BC=8C</p><p>=E6=82=A8=E5=9C=A8Lerio AI =",
+    "Speaker=E7=9A=\t2026-03-10 03:14:54"
+  ],
+  "stdout": "id\tsubject\tbody_preview\treceivedAt\n49\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMTU6MDAgc2VsbCBzdHJvbmc=\t2026-03-10 12:00:01\n50\tTrend Follower BUY: NZDUSD (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBOWkRVU0QgKFBFUklPRF9NMTUp\t2026-03-10 11:59:59\n48\tTrendWave Enhanced Alert\tRVVSVVNEID0+IDIwMjYuMDMuMTAgMTQ6MDAgc2VsbCBzdHJvbmc=\t2026-03-10 11:00:01\n47\tTrendWave Enhanced Alert\tR0JQSlBZID0+IDIwMjYuMDMuMTAgMTI6NDUgc2VsbCBzdHJvbmc=\t2026-03-10 09:44:59\n46\tTrendWave Enhanced Alert\tRVVSVVNEID0+IDIwMjYuMDMuMTAgMTI6MDAgc2VsbCBzdHJvbmc=\t2026-03-10 09:00:00\n45\tTrendWave Enhanced Alert\tVVNEQ0hGID0+IDIwMjYuMDMuMTAgMTI6MDAgYnV5IHN0cm9uZw==\t2026-03-10 09:00:00\n44\tTrendWave Enhanced Alert\tR0JQVVNEID0+IDIwMjYuMDMuMTAgMTE6NDUgc2VsbCBzdHJvbmc=\t2026-03-10 08:45:01\n42\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMTE6MDAgc2VsbCB3ZWFr\t2026-03-10 08:00:01\n43\tTrendWave Enhanced Alert\tRVVSR0JQID0+IDIwMjYuMDMuMTAgMTA6NDUgYnV5IHdlYWs=\t2026-03-10 07:45:00\n41\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMTA6MTUgc2VsbCB3ZWFr\t2026-03-10 07:15:01\n40\tTrend Follower BUY: GBPUSD (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBHQlBVU0QgKFBFUklPRF9NMTUp\t2026-03-10 06:15:01\n39\tTrend Follower SELL: AUDUSD (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgU0VMTDogQVVEVVNEIChQRVJJT0RfTTE1KQ==\t2026-03-10 06:00:12\n38\tTrend Follower BUY: AUDUSD (PERIOD_H1)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBBVURVU0QgKFBFUklPRF9IMSk=\t2026-03-10 06:00:11\n37\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMDg6MDAgc2VsbCBzdHJvbmc=\t2026-03-10 05:00:01\n34\tTrend Follower BUY: USDCHF (PERIOD_M15)\tVHJlbmQgRm9sbG93ZXIgQlVZOiBVU0RDSEYgKFBFUklPRF9NMTUp\t2026-03-10 04:44:59\n36\t您的一个设备激活槽已到期并被移除\t<p>=E6=82=A8=E5=A5=BD=EF=BC=8C</p><p>=E6=82=A8=E5=9C=A8Lerio AI =\nSpeaker=E7=9A=\t2026-03-10 03:14:54\n35\tTrendWave Enhanced Alert\tWEFVVVNEID0+IDIwMjYuMDMuMTAgMDY6MDUgc2VsbCB3ZWFr\t2026-03-10 03:06:22\n33\tTrendWave Enhanced Alert\tRVVSR0JQID0+IDIwMjYuMDMuMTAgMDY6MDUgYnV5IHN0cm9uZw==\t2026-03-10 03:06:11\n32\tTrendWave Enhanced Alert\tQVVETlpEID0+IDIwMjYuMDMuMTAgMDY6MDAgc2VsbCB3ZWFr\t2026-03-10 03:00:01\n31\tTrendWave Enhanced Alert\tWEFVVVNEID0+IDIwMjYuMDMuMTAgMDY6MDAgc2VsbCB3ZWFr\t2026-03-10 03:00:00\n",
+  "stderr": "",
+  "execution_time_ms": 1506
+}

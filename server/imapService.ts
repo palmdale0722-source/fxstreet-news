@@ -103,7 +103,27 @@ export async function fetchSignalEmails(
                 const htmlText = typeof parsed.html === "string"
                   ? parsed.html.replace(/<[^>]+>/g, "")
                   : "";
-                const body = parsed.text || htmlText || "";
+                let rawBody = parsed.text || htmlText || "";
+
+                // 处理 163 邮箱将正文以 base64 编码返回的情况
+                // 判断条件：内容去掉空白和换行后全部是 base64 字符，且长度是 4 的倍数
+                const stripped = rawBody.replace(/\s/g, "");
+                const isBase64 =
+                  stripped.length > 0 &&
+                  stripped.length % 4 === 0 &&
+                  /^[A-Za-z0-9+/]+=*$/.test(stripped);
+                if (isBase64) {
+                  try {
+                    const decoded = Buffer.from(stripped, "base64").toString("utf8");
+                    // 解码后内容应包含可读字符，否则保留原始内容
+                    if (/[\x20-\x7E\u4e00-\u9fff]/.test(decoded)) {
+                      rawBody = decoded;
+                    }
+                  } catch {
+                    // 解码失败则保留原始内容
+                  }
+                }
+                const body = rawBody;
                 const fromEmail =
                   parsed.from?.value?.[0]?.address || "";
                 const receivedAt = parsed.date || new Date();
