@@ -61,12 +61,17 @@ export async function insertNewsItems(items: InsertNews[]): Promise<number> {
   const db = await getDb();
   if (!db || items.length === 0) return 0;
   let inserted = 0;
+  // 逐条 INSERT IGNORE：affectedRows=1 表示真正新增，0 表示重复跳过
   for (const item of items) {
     try {
-      await db.insert(news).values(item).onDuplicateKeyUpdate({ set: { title: item.title } });
-      inserted++;
+      const result = await db.execute(
+        sql`INSERT IGNORE INTO news (title, link, description, publishedAt, source, author)
+         VALUES (${item.title}, ${item.link}, ${item.description ?? null}, ${item.publishedAt}, ${item.source}, ${item.author ?? null})`
+      ) as unknown as [{ affectedRows?: number }, unknown];
+      const affected = result[0]?.affectedRows ?? 0;
+      if (affected > 0) inserted++;
     } catch (e) {
-      // skip duplicates
+      // skip errors
     }
   }
   return inserted;

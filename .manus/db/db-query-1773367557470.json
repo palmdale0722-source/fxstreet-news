@@ -1,0 +1,50 @@
+{
+  "query": "SELECT title, source, publishedAt FROM news ORDER BY publishedAt DESC LIMIT 8;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT title, source, publishedAt FROM news ORDER BY publishedAt DESC LIMIT 8;",
+  "rows": [
+    {
+      "title": "Japanese Yen recovers slightly vs. USD as intervention fears loom ahead of US PCE data",
+      "source": "News",
+      "publishedAt": "2026-03-13 01:19:28"
+    },
+    {
+      "title": "PBOC sets USD/CNY reference rate at 6.9007 vs. 6.8959 previous",
+      "source": "News",
+      "publishedAt": "2026-03-13 01:15:40"
+    },
+    {
+      "title": "EUR/USD holds gains above 1.1500 ahead of US PCE inflation release",
+      "source": "News",
+      "publishedAt": "2026-03-13 01:03:25"
+    },
+    {
+      "title": "Australian Dollar rises as markets price in March RBA rate hike",
+      "source": "News",
+      "publishedAt": "2026-03-13 01:02:22"
+    },
+    {
+      "title": "RBA to raise cash rate to 4.10% on March 17 - Reuters poll",
+      "source": "News",
+      "publishedAt": "2026-03-13 00:38:36"
+    },
+    {
+      "title": "WTI climbs above $95.50 as Iran says the Strait of Hormuz must remain closed",
+      "source": "News",
+      "publishedAt": "2026-03-13 00:00:06"
+    },
+    {
+      "title": "SGD: Energy shock keeps MAS path in play – OCBC",
+      "source": "News",
+      "publishedAt": "2026-03-12 23:42:00"
+    },
+    {
+      "title": "Iran’s Mojtaba Khamenei says Strait of Hormuz must remain closed as tool to pressure enemy",
+      "source": "News",
+      "publishedAt": "2026-03-12 23:24:46"
+    }
+  ],
+  "messages": [],
+  "stdout": "title\tsource\tpublishedAt\nJapanese Yen recovers slightly vs. USD as intervention fears loom ahead of US PCE data\tNews\t2026-03-13 01:19:28\nPBOC sets USD/CNY reference rate at 6.9007 vs. 6.8959 previous\tNews\t2026-03-13 01:15:40\nEUR/USD holds gains above 1.1500 ahead of US PCE inflation release\tNews\t2026-03-13 01:03:25\nAustralian Dollar rises as markets price in March RBA rate hike\tNews\t2026-03-13 01:02:22\nRBA to raise cash rate to 4.10% on March 17 - Reuters poll\tNews\t2026-03-13 00:38:36\nWTI climbs above $95.50 as Iran says the Strait of Hormuz must remain closed\tNews\t2026-03-13 00:00:06\nSGD: Energy shock keeps MAS path in play – OCBC\tNews\t2026-03-12 23:42:00\nIran’s Mojtaba Khamenei says Strait of Hormuz must remain closed as tool to pressure enemy\tNews\t2026-03-12 23:24:46\n",
+  "stderr": "",
+  "execution_time_ms": 1632
+}
