@@ -72,12 +72,30 @@ export default function Agent() {
     { enabled: !!activeSessionId }
   );
 
+  // 待发送的消息（新建会话后自动发送）
+  const pendingMessageRef = useRef<string | null>(null);
+
   const newSessionMutation = trpc.agent.newSession.useMutation({
     onSuccess: (session) => {
       utils.agent.getSessions.invalidate();
       if (session) {
         setActiveSessionId(session.id);
         setMessages([]);
+        // 如果有待发送的消息，在会话建立后立即发送
+        if (pendingMessageRef.current) {
+          const msg = pendingMessageRef.current;
+          pendingMessageRef.current = null;
+          setIsSending(true);
+          setMessages([
+            { role: "user", content: msg },
+            { role: "assistant", content: "", isStreaming: true },
+          ]);
+          chatMutation.mutate({
+            sessionId: session.id,
+            message: msg,
+            pair: session.pair || selectedPair,
+          });
+        }
       }
     },
   });
@@ -352,8 +370,9 @@ export default function Agent() {
                   <button
                     key={label}
                     onClick={() => {
-                      handleNewSession();
-                      setTimeout(() => handleQuickQuestion(template), 500);
+                      const question = template(selectedPair);
+                      pendingMessageRef.current = question;
+                      newSessionMutation.mutate({ pair: selectedPair });
                     }}
                     className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all text-left group"
                   >
@@ -388,32 +407,12 @@ export default function Agent() {
                 <span className="text-xs text-muted-foreground hidden sm:block">关注：</span>
                 <div className="relative">
                   <button
-                    onClick={() => setShowPairSelector(!showPairSelector)}
+                    onClick={(e) => { e.stopPropagation(); setShowPairSelector(!showPairSelector); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-xs font-medium hover:bg-amber-100 transition-colors"
                   >
                     <ArrowLeftRight className="w-3 h-3" />
                     {selectedPair}
                   </button>
-                  {showPairSelector && (
-                    <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-xl p-3 w-72">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">选择货币对</p>
-                      <div className="grid grid-cols-4 gap-1.5 max-h-64 overflow-y-auto">
-                        {G8_PAIRS.map(pair => (
-                          <button
-                            key={pair}
-                            onClick={() => { setSelectedPair(pair); setShowPairSelector(false); }}
-                            className={`px-1.5 py-1 rounded text-xs font-medium transition-all ${
-                              selectedPair === pair
-                                ? "bg-amber-600 text-white"
-                                : "hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700"
-                            }`}
-                          >
-                            {pair}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -540,9 +539,33 @@ export default function Agent() {
         )}
       </div>
 
-      {/* 点击外部关闭货币对选择器 */}
+      {/* 货币对选择器弹出层（portal 式 fixed 定位） */}
       {showPairSelector && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowPairSelector(false)} />
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowPairSelector(false)} />
+          <div
+            className="fixed z-50 bg-card border border-border rounded-xl shadow-xl p-3 w-72"
+            style={{ top: 60, right: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-xs font-medium text-muted-foreground mb-2">选择货币对</p>
+            <div className="grid grid-cols-4 gap-1.5 max-h-64 overflow-y-auto">
+              {G8_PAIRS.map(pair => (
+                <button
+                  key={pair}
+                  onClick={() => { setSelectedPair(pair); setShowPairSelector(false); }}
+                  className={`px-1.5 py-1 rounded text-xs font-medium transition-all ${
+                    selectedPair === pair
+                      ? "bg-amber-600 text-white"
+                      : "hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700"
+                  }`}
+                >
+                  {pair}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
