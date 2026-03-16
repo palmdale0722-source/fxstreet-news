@@ -113,3 +113,28 @@ export const signalNotes = mysqlTable("signal_notes", {
 
 export type SignalNote = typeof signalNotes.$inferSelect;
 export type InsertSignalNote = typeof signalNotes.$inferInsert;
+
+// ─── AI Agent 对话表 ──────────────────────────────────────────────────────────
+// 每个用户可有多个会话，每个会话包含多轪对话
+export const agentSessions = mysqlTable("agent_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull().default("新对话"),
+  pair: varchar("pair", { length: 20 }),  // 当前关注的货币对，如 EUR/USD
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AgentSession = typeof agentSessions.$inferSelect;
+export type InsertAgentSession = typeof agentSessions.$inferInsert;
+
+export const agentMessages = mysqlTable("agent_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AgentMessage = typeof agentMessages.$inferSelect;
+export type InsertAgentMessage = typeof agentMessages.$inferInsert;

@@ -302,6 +302,12 @@ function Navbar({
             <Signal className="w-3.5 h-3.5" />
             交易信号
           </Link>
+          <Link href="/agent"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
+            style={{ background: "oklch(0.55 0.15 50 / 0.15)", color: "oklch(0.75 0.15 50)", border: "1px solid oklch(0.55 0.15 50 / 0.30)" }}>
+            <BrainCircuit className="w-3.5 h-3.5" />
+            AI 分析师
+          </Link>
           {loading ? (
             <Skeleton className="h-8 w-20" />
           ) : user ? (

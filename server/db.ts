@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -198,12 +198,10 @@ export async function getSignalNotes(signalId: number) {
 export async function upsertSignalNote(data: InsertSignalNote): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  // 每个用户对每个信号只保留一条备注
   const existing = await db.select({ id: signalNotes.id })
     .from(signalNotes)
     .where(and(eq(signalNotes.signalId, data.signalId), eq(signalNotes.userId, data.userId)))
     .limit(1);
-
   if (existing.length > 0) {
     await db.update(signalNotes)
       .set({ content: data.content, userName: data.userName, updatedAt: new Date() })
@@ -211,4 +209,74 @@ export async function upsertSignalNote(data: InsertSignalNote): Promise<void> {
   } else {
     await db.insert(signalNotes).values(data);
   }
+}
+
+// ─── Agent Sessions & Messages ─────────────────────────────────────────────────────────────────
+
+export async function getAgentSessions(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(agentSessions)
+    .where(eq(agentSessions.userId, userId))
+    .orderBy(desc(agentSessions.updatedAt))
+    .limit(50);
+}
+
+export async function createAgentSession(data: InsertAgentSession) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const [result] = await db.insert(agentSessions).values(data).$returningId();
+  const rows = await db.select().from(agentSessions).where(eq(agentSessions.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function updateAgentSessionTitle(id: number, title: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(agentSessions).set({ title }).where(eq(agentSessions.id, id));
+}
+
+export async function deleteAgentSession(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(agentMessages).where(eq(agentMessages.sessionId, id));
+  await db.delete(agentSessions).where(and(eq(agentSessions.id, id), eq(agentSessions.userId, userId)));
+}
+
+export async function getAgentMessages(sessionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(agentMessages)
+    .where(eq(agentMessages.sessionId, sessionId))
+    .orderBy(agentMessages.createdAt);
+}
+
+export async function saveAgentMessage(data: InsertAgentMessage) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(agentMessages).values(data);
+}
+
+// 获取最近 N 条新闻和分析文章作为 Agent 上下文
+export async function getNewsContextForAgent(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    title: news.title,
+    description: news.description,
+    publishedAt: news.publishedAt,
+    source: news.source,
+    author: news.author,
+  }).from(news)
+    .orderBy(desc(news.publishedAt))
+    .limit(limit);
+}
+
+// 获取最近一条洞察和全部货币展望作为上下文
+export async function getLatestInsightAndOutlooks() {
+  const db = await getDb();
+  if (!db) return { insight: null, outlooks: [] };
+  const insightRows = await db.select().from(insights).orderBy(desc(insights.generatedAt)).limit(1);
+  const outlookRows = await db.select().from(outlooks).orderBy(desc(outlooks.generatedAt)).limit(8);
+  return { insight: insightRows[0] ?? null, outlooks: outlookRows };
 }

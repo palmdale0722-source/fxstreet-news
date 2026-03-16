@@ -81,6 +81,30 @@ vi.mock("./db", () => ({
     },
   ]),
   upsertSignalNote: vi.fn().mockResolvedValue(undefined),
+  getAgentSessions: vi.fn().mockResolvedValue([
+    {
+      id: 1,
+      userId: 1,
+      title: "EUR/USD 分析",
+      pair: "EUR/USD",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]),
+  createAgentSession: vi.fn().mockResolvedValue({
+    id: 2,
+    userId: 1,
+    title: "GBP/USD 分析",
+    pair: "GBP/USD",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }),
+  deleteAgentSession: vi.fn().mockResolvedValue(undefined),
+  getAgentMessages: vi.fn().mockResolvedValue([]),
+  saveAgentMessage: vi.fn().mockResolvedValue(undefined),
+  updateAgentSessionTitle: vi.fn().mockResolvedValue(undefined),
+  getNewsContextForAgent: vi.fn().mockResolvedValue([]),
+  getLatestInsightAndOutlooks: vi.fn().mockResolvedValue({ insight: null, outlooks: [] }),
 }));
 
 // Mock imapService
@@ -279,5 +303,51 @@ describe("signals routes", () => {
     expect(result.fetched).toBe(5);
     expect(result.inserted).toBe(2);
     expect(result.fetchedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("agent routes", () => {
+  it("agent.getSessions requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.agent.getSessions()).rejects.toThrow();
+  });
+
+  it("agent.getSessions returns sessions for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.agent.getSessions();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("agent.newSession requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.agent.newSession({ pair: "EUR/USD" })).rejects.toThrow();
+  });
+
+  it("agent.newSession creates session for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.agent.newSession({ pair: "GBP/USD" });
+    expect(result).toBeDefined();
+  });
+
+  it("agent.deleteSession requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.agent.deleteSession({ sessionId: 1 })).rejects.toThrow();
+  });
+
+  it("agent.deleteSession works for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.agent.deleteSession({ sessionId: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("agent.getMessages requires authentication", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.agent.getMessages({ sessionId: 1 })).rejects.toThrow();
+  });
+
+  it("agent.getMessages returns messages for authenticated user", async () => {
+    const caller = appRouter.createCaller(createAuthContext());
+    const result = await caller.agent.getMessages({ sessionId: 1 });
+    expect(Array.isArray(result)).toBe(true);
   });
 });

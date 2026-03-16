@@ -14,10 +14,19 @@ import {
   updateSignalStatus,
   getSignalNotes,
   upsertSignalNote,
+  getAgentSessions,
+  createAgentSession,
+  deleteAgentSession,
+  getAgentMessages,
+  saveAgentMessage,
+  updateAgentSessionTitle,
+  getNewsContextForAgent,
+  getLatestInsightAndOutlooks,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
+import { invokeLLM } from "./_core/llm";
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -143,7 +152,138 @@ export const appRouter = router({
     }),
   }),
 
-  // ─── 管理路由（手动触发更新）────────────────────────────────────────────────
+  //  // ─── AI Agent 路由 ─────────────────────────────────────────────────────────────────
+  agent: router({
+    // 获取当前用户的所有会话
+    getSessions: protectedProcedure.query(async ({ ctx }) => {
+      return getAgentSessions(ctx.user.id);
+    }),
+
+    // 新建会话
+    newSession: protectedProcedure
+      .input(z.object({ pair: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const title = input.pair ? `${input.pair} 分析` : "新对话";
+        return createAgentSession({ userId: ctx.user.id, title, pair: input.pair });
+      }),
+
+    // 删除会话
+    deleteSession: protectedProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await deleteAgentSession(input.sessionId, ctx.user.id);
+        return { success: true };
+      }),
+
+    // 获取某个会话的历史消息
+    getMessages: protectedProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .query(async ({ input }) => {
+        return getAgentMessages(input.sessionId);
+      }),
+
+    // 核心：流式对话（返回完整回复，同时存入数据库）
+    chat: protectedProcedure
+      .input(z.object({
+        sessionId: z.number(),
+        message: z.string().min(1).max(2000),
+        pair: z.string().optional(),  // 当前关注的货币对
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // 1. 存入用户消息
+        await saveAgentMessage({
+          sessionId: input.sessionId,
+          role: "user",
+          content: input.message,
+        });
+
+        // 2. 获取历史对话（最多 10 轪）
+        const history = await getAgentMessages(input.sessionId);
+        const recentHistory = history.slice(-10);
+
+        // 3. 获取数据库上下文
+        const [newsCtx, { insight, outlooks: outlookList }] = await Promise.all([
+          getNewsContextForAgent(20),
+          getLatestInsightAndOutlooks(),
+        ]);
+
+        // 4. 构建系统 Prompt
+        const today = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+        const pairFocus = input.pair || "全局 G8 货币对";
+
+        const newsSection = newsCtx.length > 0
+          ? newsCtx.map((n, i) =>
+              `${i + 1}. [${n.source}] ${n.title}${n.description ? " - " + n.description.slice(0, 120) : ""} (${new Date(n.publishedAt).toLocaleDateString("zh-CN")})`
+            ).join("\n")
+          : "暂无新闻数据";
+
+        const outlookSection = outlookList.length > 0
+          ? outlookList.map(o => `${o.currency}: [${o.sentiment === "bullish" ? "看涨" : o.sentiment === "bearish" ? "看跌" : "中性"}] ${o.outlook.slice(0, 150)}`).join("\n")
+          : "暂无展望数据";
+
+        const insightSection = insight
+          ? `市场总结: ${insight.summary}\n地缘政治: ${insight.geopolitics || ""}\n能源市场: ${insight.energy || ""}\n汇市表现: ${insight.forex || ""}\n交易建议: ${insight.tradingAdvice || ""}`
+          : "暂无洞察数据";
+
+        const systemPrompt = `你是一位专业的外汇交易分析师，擅长 G8 货币对的技术分析和基本面分析。今天是 ${today}，当前关注的货币对：${pairFocus}。
+
+你的分析能力包括：
+- 趋势分析：多周期趋势判断（日线、周线、月线）
+- 关键点位：支撑位、阻力位、目标位、止损位
+- 技术指标： RSI、MACD、布林带、均线系统、波浪理论、斐波常用比例
+- 入场时机：具体的入场区间、止损设置和目标位
+- 风险评估：风险收益比、仓位管理建议
+- 市场情绪：基于新闻和展望的情绪分析
+
+当前数据库最新市场信息：
+
+【最新新闻（近 20 条）】
+${newsSection}
+
+【各货币AI展望】
+${outlookSection}
+
+【今日市场洞察】
+${insightSection}
+
+回答要求：
+- 使用中文回答
+- 结合上述市场数据和技术分析方法给出具体建议
+- 关键点位用具体数字表示（如 1.0850）
+- 分析要有逻辑层次，先対市场环境判断，再到具体操作建议
+- 如果用户问的是具体货币对，请给出详细的技术分析和操作计划`;
+
+        // 5. 调用 LLM
+        const llmMessages = [
+          { role: "system" as const, content: systemPrompt },
+          ...recentHistory.slice(0, -1).map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+          { role: "user" as const, content: input.message },
+        ];
+
+        const response = await invokeLLM({ messages: llmMessages });
+        const rawContent = response.choices[0]?.message?.content;
+        const assistantContent: string = typeof rawContent === "string" ? rawContent : (rawContent ? JSON.stringify(rawContent) : "暂无回复");
+
+        // 6. 存入 AI 回复
+        await saveAgentMessage({
+          sessionId: input.sessionId,
+          role: "assistant",
+          content: assistantContent,
+        });
+
+        // 7. 如果是第一条消息，自动更新会话标题
+        if (history.length <= 1) {
+          const shortTitle = input.pair
+            ? `${input.pair} - ${input.message.slice(0, 20)}`
+            : input.message.slice(0, 25);
+          await updateAgentSessionTitle(input.sessionId, shortTitle + (shortTitle.length >= 25 ? "..." : ""));
+        }
+
+        return { content: assistantContent };
+      }),
+  }),
+
+  // ─── 管理路由（手动触发更新）────────────────────────────────────────────
   admin: router({
     triggerUpdate: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {

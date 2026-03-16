@@ -67,3 +67,15 @@
 - [x] 检查服务器日志，确认 RSS 抓取是否报错
 - [x] 检查数据库最新新闻时间，确认最后一次成功更新时间
 - [x] 修复新闻停止更新的根本原因
+
+## AI 交易分析 Agent 页面
+- [x] 数据库：新增 agent_sessions 表（会话）和 agent_messages 表（对话历史）
+- [x] 后端：构建系统 Prompt，注入历史新闻、货币展望、市场洞察作为上下文
+- [x] 后端：tRPC agent.chat 路由（支持多轮对话）
+- [x] 后端：tRPC agent.getSessions / agent.getMessages / agent.newSession / agent.deleteSession
+- [x] 前端：/agent 页面，左侧会话列表，右侧对话区
+- [x] 前端：货币对快捷选择器（G8 全部 28 个货币对）
+- [x] 前端：Markdown 渲染 AI 回复
+- [x] 前端：技术分析快捷提问按鈕（趋势方向/关键点位/入场建议/风险评估/技术形态/市场情绪）
+- [x] 前端：导航栏添加“AI 分析师”入口
+- [x] 测试：新增 agent 路由 Vitest 单元测试（8 个测试用例）

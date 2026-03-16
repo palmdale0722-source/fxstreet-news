@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `agent_messages` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`sessionId` int NOT NULL,\n\t`role` enum('user','assistant') NOT NULL,\n\t`content` text NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `agent_messages_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE `agent_sessions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`title` varchar(255) NOT NULL DEFAULT '新对话',\n\t`pair` varchar(20),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `agent_sessions_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE `agent_messages` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`sessionId` int NOT NULL,\n\t`role` enum('user','assistant') NOT NULL,\n\t`content` text NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `agent_messages_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE `agent_sessions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`title` varchar(255) NOT NULL DEFAULT '新对话',\n\t`pair` varchar(20),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `agent_sessions_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1928
+}
