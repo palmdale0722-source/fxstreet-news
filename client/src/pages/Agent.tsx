@@ -323,7 +323,7 @@ export default function Agent() {
             <div className="w-full max-w-2xl space-y-3">
               <p className="text-sm font-medium text-center text-muted-foreground">选择关注的货币对，开始分析</p>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                {G8_PAIRS.slice(0, 7).map(pair => (
+                {G8_PAIRS.map(pair => (
                   <button
                     key={pair}
                     onClick={() => setSelectedPair(pair)}
@@ -337,29 +337,6 @@ export default function Agent() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => setShowPairSelector(!showPairSelector)}
-                className="text-xs text-amber-600 hover:underline w-full text-center"
-              >
-                {showPairSelector ? "收起" : "显示全部 28 个货币对 ▾"}
-              </button>
-              {showPairSelector && (
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                  {G8_PAIRS.slice(7).map(pair => (
-                    <button
-                      key={pair}
-                      onClick={() => setSelectedPair(pair)}
-                      className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                        selectedPair === pair
-                          ? "bg-amber-600 text-white border-amber-600 shadow-sm"
-                          : "bg-card border-border hover:border-amber-400 hover:text-amber-700"
-                      }`}
-                    >
-                      {pair}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* 快捷提问 */}
