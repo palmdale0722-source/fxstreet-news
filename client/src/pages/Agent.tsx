@@ -7,11 +7,86 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare, Plus, Trash2, Send, Bot, User,
-  TrendingUp, ChevronLeft, Loader2, BarChart2, ArrowLeftRight,
+  TrendingUp, TrendingDown, ChevronLeft, Loader2, BarChart2, ArrowLeftRight,
   Lightbulb, ShieldAlert, Target, Clock
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+
+// 实时价格标签组件
+function ChatHeader({
+  sessionTitle,
+  selectedPair,
+  showPairSelector,
+  setShowPairSelector,
+}: {
+  sessionTitle: string;
+  selectedPair: string;
+  showPairSelector: boolean;
+  setShowPairSelector: (v: boolean) => void;
+}) {
+  const { data: quote, isLoading: quoteLoading } = trpc.agent.getQuote.useQuery(
+    { pair: selectedPair },
+    { refetchInterval: 30000, staleTime: 25000 } // 每 30s 自动刷新
+  );
+
+  const isUp = quote && quote.change >= 0;
+  const priceColor = quoteLoading ? "text-muted-foreground" : isUp ? "text-emerald-600" : "text-red-500";
+
+  return (
+    <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-card/50 backdrop-blur-sm">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Bot className="w-5 h-5 text-amber-600 flex-shrink-0" />
+        <div className="min-w-0">
+          <p className="font-medium text-sm truncate">{sessionTitle}</p>
+          <p className="text-xs text-muted-foreground">基于实时行情和市场数据</p>
+        </div>
+      </div>
+
+      {/* 实时价格显示 */}
+      {quote && (
+        <div className="hidden sm:flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60">
+            {isUp ? (
+              <TrendingUp className="w-3 h-3 text-emerald-600" />
+            ) : (
+              <TrendingDown className="w-3 h-3 text-red-500" />
+            )}
+            <span className="font-mono font-semibold text-foreground">{quote.currentPrice.toFixed(5)}</span>
+            <span className={`font-mono ${priceColor}`}>
+              {isUp ? "+" : ""}{quote.changePct.toFixed(3)}%
+            </span>
+          </div>
+          <div className="text-muted-foreground text-xs">
+            <span>H: {quote.dayHigh.toFixed(5)}</span>
+            <span className="mx-1">·</span>
+            <span>L: {quote.dayLow.toFixed(5)}</span>
+          </div>
+        </div>
+      )}
+      {quoteLoading && (
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>加载行情...</span>
+        </div>
+      )}
+
+      {/* 货币对切换 */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-xs text-muted-foreground hidden sm:block">关注：</span>
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowPairSelector(!showPairSelector); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-xs font-medium hover:bg-amber-100 transition-colors"
+          >
+            <ArrowLeftRight className="w-3 h-3" />
+            {selectedPair}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // G8 货币对完整列表（28 对）
 const G8_PAIRS = [
@@ -269,7 +344,10 @@ export default function Agent() {
                       ? "bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100"
                       : "hover:bg-muted"
                   }`}
-                  onClick={() => setActiveSessionId(session.id)}
+                  onClick={() => {
+                    setActiveSessionId(session.id);
+                    if (session.pair) setSelectedPair(session.pair);
+                  }}
                 >
                   <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
@@ -368,31 +446,12 @@ export default function Agent() {
         ) : (
           <>
             {/* 对话顶部栏 */}
-            <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-card/50 backdrop-blur-sm">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Bot className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {(sessions as Session[]).find(s => s.id === activeSessionId)?.title || "AI 分析师"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">基于实时新闻和市场数据</p>
-                </div>
-              </div>
-
-              {/* 货币对切换 */}
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="text-xs text-muted-foreground hidden sm:block">关注：</span>
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowPairSelector(!showPairSelector); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-xs font-medium hover:bg-amber-100 transition-colors"
-                  >
-                    <ArrowLeftRight className="w-3 h-3" />
-                    {selectedPair}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ChatHeader
+              sessionTitle={(sessions as Session[]).find(s => s.id === activeSessionId)?.title || "AI 分析师"}
+              selectedPair={selectedPair}
+              showPairSelector={showPairSelector}
+              setShowPairSelector={setShowPairSelector}
+            />
 
             {/* 消息列表 */}
             <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">

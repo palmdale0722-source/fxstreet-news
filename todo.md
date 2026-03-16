@@ -82,3 +82,10 @@
 
 ## Bug 修复 - AI 分析师货币对按钮
 - [x] 修复：除 EUR/USD 外其他货币对按鈕无法点击的问题（重构 newSession onSuccess 回调，将下拉菜单改为 fixed 定位）
+
+## 实时外汇行情接入
+- [x] 后端：构建 getForexQuote(pair) 函数，通过 Yahoo Finance API 获取实时 OHLC 行情
+- [x] 后端：计算技术指标（RSI14、SMA20/50/200、MACD、布林带、ATR14）并注入 AI Prompt
+- [x] 后端：更新 agent.chat 路由，在系统 Prompt 中注入实时行情数据
+- [x] 前端：对话界面顶部展示实时价格标签（当前价、涨跌幅、日内高低点，每30s自动刷新）
+- [x] 后端：新增 agent.getQuote tRPC 接口供前端查询实时价格

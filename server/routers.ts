@@ -27,6 +27,7 @@ import {
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
 import { invokeLLM } from "./_core/llm";
+import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -182,6 +183,27 @@ export const appRouter = router({
         return getAgentMessages(input.sessionId);
       }),
 
+    // 获取实时行情（供前端展示价格标签）
+    getQuote: publicProcedure
+      .input(z.object({ pair: z.string() }))
+      .query(async ({ input }) => {
+        const quote = await getForexQuote(input.pair);
+        if (!quote) return null;
+        return {
+          pair: quote.pair,
+          currentPrice: quote.currentPrice,
+          change: quote.change,
+          changePct: quote.changePct,
+          dayHigh: quote.dayHigh,
+          dayLow: quote.dayLow,
+          open: quote.open,
+          previousClose: quote.previousClose,
+          trend: quote.indicators.trend,
+          rsi14: quote.indicators.rsi14,
+          fetchedAt: quote.fetchedAt,
+        };
+      }),
+
     // 核心：流式对话（返回完整回复，同时存入数据库）
     chat: protectedProcedure
       .input(z.object({
@@ -201,10 +223,11 @@ export const appRouter = router({
         const history = await getAgentMessages(input.sessionId);
         const recentHistory = history.slice(-10);
 
-        // 3. 获取数据库上下文
-        const [newsCtx, { insight, outlooks: outlookList }] = await Promise.all([
+        // 3. 获取数据库上下文 + 实时行情（并行）
+        const [newsCtx, { insight, outlooks: outlookList }, forexQuote] = await Promise.all([
           getNewsContextForAgent(20),
           getLatestInsightAndOutlooks(),
+          input.pair ? getForexQuote(input.pair) : Promise.resolve(null),
         ]);
 
         // 4. 构建系统 Prompt
@@ -225,17 +248,24 @@ export const appRouter = router({
           ? `市场总结: ${insight.summary}\n地缘政治: ${insight.geopolitics || ""}\n能源市场: ${insight.energy || ""}\n汇市表现: ${insight.forex || ""}\n交易建议: ${insight.tradingAdvice || ""}`
           : "暂无洞察数据";
 
+        // 实时行情数据块
+        const quoteSection = forexQuote
+          ? formatQuoteForPrompt(forexQuote)
+          : input.pair
+            ? `注意：${input.pair} 实时行情数据暂时无法获取，请基于新闻和展望数据进行分析。`
+            : "";
+
         const systemPrompt = `你是一位专业的外汇交易分析师，擅长 G8 货币对的技术分析和基本面分析。今天是 ${today}，当前关注的货币对：${pairFocus}。
 
 你的分析能力包括：
 - 趋势分析：多周期趋势判断（日线、周线、月线）
 - 关键点位：支撑位、阻力位、目标位、止损位
-- 技术指标： RSI、MACD、布林带、均线系统、波浪理论、斐波常用比例
+- 技术指标：RSI、MACD、布林带、均线系统、波浪理论、斐波常用比例
 - 入场时机：具体的入场区间、止损设置和目标位
 - 风险评估：风险收益比、仓位管理建议
 - 市场情绪：基于新闻和展望的情绪分析
 
-当前数据库最新市场信息：
+${quoteSection ? `【实时行情与技术指标（来自 Yahoo Finance）】\n${quoteSection}\n\n` : ""}当前数据库最新市场信息：
 
 【最新新闻（近 20 条）】
 ${newsSection}
@@ -248,10 +278,10 @@ ${insightSection}
 
 回答要求：
 - 使用中文回答
-- 结合上述市场数据和技术分析方法给出具体建议
-- 关键点位用具体数字表示（如 1.0850）
-- 分析要有逻辑层次，先対市场环境判断，再到具体操作建议
-- 如果用户问的是具体货币对，请给出详细的技术分析和操作计划`;
+- 优先基于上方实时行情数据中的具体价格和技术指标进行分析，不要使用假设性数字
+- 关键点位用具体数字表示（如 1.0850），结合实时数据中的支撑阻力区间
+- 分析要有逻辑层次：先判断市场环境，再给出技术分析，最后提出具体操作建议
+- 如果用户问的是具体货币对，请给出详细的技术分析和操作计划（含入场、止损、目标位）`;
 
         // 5. 调用 LLM
         const llmMessages = [
