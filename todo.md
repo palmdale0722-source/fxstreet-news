@@ -89,3 +89,12 @@
 - [x] 后端：更新 agent.chat 路由，在系统 Prompt 中注入实时行情数据
 - [x] 前端：对话界面顶部展示实时价格标签（当前价、涨跌幅、日内高低点，每30s自动刷新）
 - [x] 后端：新增 agent.getQuote tRPC 接口供前端查询实时价格
+
+## MT4 数据推送桥
+- [x] 数据库：新增 mt4_bars 表和 mt4_status 表
+- [x] 后端：创建 mt4Service.ts，实现数据存储和技术指标计算（SMA/RSI）
+- [x] 后端：创建 mt4Routes.ts，接收 EA 推送的 HTTP POST 请求（含 API 密钥鉴权）
+- [x] 后端：更新 agent.chat，优先使用 MT4 数据，降级回 Yahoo Finance
+- [x] 前端：对话界面顶部显示 MT4 连接状态指示器（在线/离线、最后推送时间）
+- [x] MQL4 EA：编写 FXStreetBridge.mq4，28对、M15、每15分钟推送、含 API 密钥鉴权
+- [x] 安装说明：mt4/README.md 详细安装步骤

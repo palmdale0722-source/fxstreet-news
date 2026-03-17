@@ -28,6 +28,7 @@ import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
 import { invokeLLM } from "./_core/llm";
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
+import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -224,10 +225,11 @@ export const appRouter = router({
         const recentHistory = history.slice(-10);
 
         // 3. 获取数据库上下文 + 实时行情（并行）
-        const [newsCtx, { insight, outlooks: outlookList }, forexQuote] = await Promise.all([
+        const [newsCtx, { insight, outlooks: outlookList }, forexQuote, mt4BarsData] = await Promise.all([
           getNewsContextForAgent(20),
           getLatestInsightAndOutlooks(),
           input.pair ? getForexQuote(input.pair) : Promise.resolve(null),
+          input.pair ? getMt4Bars(input.pair, 100, "M15") : Promise.resolve([]),
         ]);
 
         // 4. 构建系统 Prompt
@@ -235,25 +237,31 @@ export const appRouter = router({
         const pairFocus = input.pair || "全局 G8 货币对";
 
         const newsSection = newsCtx.length > 0
-          ? newsCtx.map((n, i) =>
+          ? newsCtx.map((n: (typeof newsCtx)[0], i: number) =>
               `${i + 1}. [${n.source}] ${n.title}${n.description ? " - " + n.description.slice(0, 120) : ""} (${new Date(n.publishedAt).toLocaleDateString("zh-CN")})`
             ).join("\n")
           : "暂无新闻数据";
 
         const outlookSection = outlookList.length > 0
-          ? outlookList.map(o => `${o.currency}: [${o.sentiment === "bullish" ? "看涨" : o.sentiment === "bearish" ? "看跌" : "中性"}] ${o.outlook.slice(0, 150)}`).join("\n")
+          ? outlookList.map((o: (typeof outlookList)[0]) => `${o.currency}: [${o.sentiment === "bullish" ? "看涨" : o.sentiment === "bearish" ? "看跌" : "中性"}] ${o.outlook.slice(0, 150)}`).join("\n")
           : "暂无展望数据";
 
         const insightSection = insight
           ? `市场总结: ${insight.summary}\n地缘政治: ${insight.geopolitics || ""}\n能源市场: ${insight.energy || ""}\n汇市表现: ${insight.forex || ""}\n交易建议: ${insight.tradingAdvice || ""}`
           : "暂无洞察数据";
 
-        // 实时行情数据块
-        const quoteSection = forexQuote
-          ? formatQuoteForPrompt(forexQuote)
-          : input.pair
-            ? `注意：${input.pair} 实时行情数据暂时无法获取，请基于新闻和展望数据进行分析。`
-            : "";
+        // 行情数据块：优先使用 MT4 推送数据，降级回 Yahoo Finance
+        let quoteSection = "";
+        let dataSource = "";
+        if (input.pair && mt4BarsData.length > 0) {
+          quoteSection = formatMt4BarsForPrompt(input.pair, mt4BarsData);
+          dataSource = "MT4 交易终端（实时推送）";
+        } else if (forexQuote) {
+          quoteSection = formatQuoteForPrompt(forexQuote);
+          dataSource = "Yahoo Finance";
+        } else if (input.pair) {
+          quoteSection = `注意：${input.pair} 实时行情数据暂时无法获取，请基于新闻和展望数据进行分析。`;
+        }
 
         const systemPrompt = `你是一位专业的外汇交易分析师，擅长 G8 货币对的技术分析和基本面分析。今天是 ${today}，当前关注的货币对：${pairFocus}。
 
@@ -313,7 +321,19 @@ ${insightSection}
       }),
   }),
 
-  // ─── 管理路由（手动触发更新）────────────────────────────────────────────
+  // ─── MT4 连接状态路由 ──────────────────────────────────────────────
+  mt4: router({
+    // 获取 MT4 连接状态（公开）
+    getStatus: publicProcedure.query(async () => {
+      return await getMt4ConnectionStatus();
+    }),
+    // 获取 API 密钥（仅登录用户）
+    getApiKey: protectedProcedure.query(() => {
+      return { apiKey: process.env.MT4_API_KEY || "mt4-bridge-key-change-me" };
+    }),
+  }),
+
+  // ─── 管理路由（手动触发更新）──────────────────────────────────────────────
   admin: router({
     triggerUpdate: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {

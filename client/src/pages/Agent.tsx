@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare, Plus, Trash2, Send, Bot, User,
   TrendingUp, TrendingDown, ChevronLeft, Loader2, BarChart2, ArrowLeftRight,
-  Lightbulb, ShieldAlert, Target, Clock
+  Lightbulb, ShieldAlert, Target, Clock, Wifi, WifiOff
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
@@ -29,6 +29,16 @@ function ChatHeader({
     { pair: selectedPair },
     { refetchInterval: 30000, staleTime: 25000 } // 每 30s 自动刷新
   );
+  const { data: mt4Statuses } = trpc.mt4.getStatus.useQuery(undefined, {
+    refetchInterval: 60000, // 每分钟刷新一次
+  });
+  const mt4Online = mt4Statuses && mt4Statuses.length > 0 && mt4Statuses.some((s: { isOnline: boolean }) => s.isOnline);
+  const mt4LastPush = mt4Statuses && mt4Statuses.length > 0
+    ? mt4Statuses.reduce((latest: Date | null, s: { lastPushedAt: Date }) => {
+        const t = new Date(s.lastPushedAt);
+        return !latest || t > latest ? t : latest;
+      }, null as Date | null)
+    : null;
 
   const isUp = quote && quote.change >= 0;
   const priceColor = quoteLoading ? "text-muted-foreground" : isUp ? "text-emerald-600" : "text-red-500";
@@ -70,6 +80,24 @@ function ChatHeader({
           <span>加载行情...</span>
         </div>
       )}
+
+      {/* MT4 连接状态指示器 */}
+      <div className="hidden md:flex items-center gap-1.5 text-xs">
+        {mt4Online ? (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+            <Wifi className="w-3 h-3" />
+            <span className="font-medium">MT4</span>
+            {mt4LastPush && (
+              <span className="text-emerald-600/70">{Math.floor((Date.now() - new Date(mt4LastPush).getTime()) / 60000)}m前</span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/60 text-muted-foreground border border-border">
+            <WifiOff className="w-3 h-3" />
+            <span>MT4未连接</span>
+          </div>
+        )}
+      </div>
 
       {/* 货币对切换 */}
       <div className="flex items-center gap-1.5 flex-shrink-0">

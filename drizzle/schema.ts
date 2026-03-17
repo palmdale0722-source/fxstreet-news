@@ -138,3 +138,36 @@ export const agentMessages = mysqlTable("agent_messages", {
 
 export type AgentMessage = typeof agentMessages.$inferSelect;
 export type InsertAgentMessage = typeof agentMessages.$inferInsert;
+
+// ─── MT4 推送行情表 ──────────────────────────────────────────────────────
+// 存储 MT4 EA 推送的 M15 K线数据，每个货币对保留最近 200 根 K线
+export const mt4Bars = mysqlTable("mt4_bars", {
+  id: int("id").autoincrement().primaryKey(),
+  symbol: varchar("symbol", { length: 20 }).notNull(),   // e.g. EURUSD
+  timeframe: varchar("timeframe", { length: 10 }).notNull().default("M15"),
+  barTime: timestamp("barTime").notNull(),               // K线开盘时间 (UTC)
+  open: text("open").notNull(),                          // 存为字符串避免浮点精度问题
+  high: text("high").notNull(),
+  low: text("low").notNull(),
+  close: text("close").notNull(),
+  volume: text("volume").notNull().default("0"),
+  spread: int("spread").default(0),                      // 点差（单位：点）
+  pushedAt: timestamp("pushedAt").defaultNow().notNull(), // EA 推送时间
+});
+
+export type Mt4Bar = typeof mt4Bars.$inferSelect;
+export type InsertMt4Bar = typeof mt4Bars.$inferInsert;
+
+// MT4 连接状态表（记录每个 EA 实例的最后推送时间）
+export const mt4Status = mysqlTable("mt4_status", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: varchar("clientId", { length: 64 }).notNull().unique(), // EA 实例标识
+  accountNumber: varchar("accountNumber", { length: 64 }),           // MT4 账号
+  broker: varchar("broker", { length: 128 }),                        // 经纪商名称
+  symbolsCount: int("symbolsCount").default(0),                      // 本次推送的货币对数量
+  lastPushedAt: timestamp("lastPushedAt").defaultNow().notNull(),    // 最后推送时间
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Mt4Status = typeof mt4Status.$inferSelect;
+export type InsertMt4Status = typeof mt4Status.$inferInsert;
