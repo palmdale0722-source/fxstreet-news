@@ -1,0 +1,76 @@
+{
+  "query": "SELECT COUNT(*) as total FROM tv_ideas; SELECT id, title, symbol, pair FROM tv_ideas ORDER BY id DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT COUNT(*) as total FROM tv_ideas; SELECT id, title, symbol, pair FROM tv_ideas ORDER BY id DESC LIMIT 20;",
+  "rows": [
+    {
+      "total": "32"
+    },
+    {
+      "total": "id\ttitle\tsymbol\tpair"
+    },
+    {
+      "total": "211\tSILVER Analysis (12H)\tSILVER\tNULL"
+    },
+    {
+      "total": "168\tEuro’s Shine Fades: Intraday Breakdown Eyes the 1.1400 Support\tNULL\tNULL"
+    },
+    {
+      "total": "161\tGBPUSD long\tGBPUSD\tGBP/USD"
+    },
+    {
+      "total": "160\tGBPUSD Short Setup – Divergence Reversal\tGBPUSD\tGBP/USD"
+    },
+    {
+      "total": "158\tNASDAQ Inverse Head and Shoulders and Falling Wedge\tNULL\tNULL"
+    },
+    {
+      "total": "157\tAUDJPY Technical &amp; Order Flow Analysis\tAUDJPY\tAUD/JPY"
+    },
+    {
+      "total": "152\tAUDUSD Technical &amp; Order Flow Analysis\tAUDUSD\tAUD/USD"
+    },
+    {
+      "total": "131\tNQ Look strongly bearish today toward PWL (previous week low)\tNULL\tNULL"
+    },
+    {
+      "total": "130\tUS30 Trade Set Up Mar 18 2026\tNULL\tNULL"
+    },
+    {
+      "total": "129\tThe UK’s Long-Term Outlook Negative for Pound\tNULL\tNULL"
+    },
+    {
+      "total": "128\tUnderstanding Market Structure: An Objective Rule-Based Method\tNULL\tNULL"
+    },
+    {
+      "total": "125\tEURUSD- Sell on rallies\tEURUSD\tEUR/USD"
+    },
+    {
+      "total": "123\t#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.\tNULL\tNULL"
+    },
+    {
+      "total": "122\tNAS100 Trade Set Up Mar 18 2026\tNULL\tNULL"
+    },
+    {
+      "total": "121\tGold 30Min Engaged ( Bullish Entry Detected )\tNULL\tNULL"
+    },
+    {
+      "total": "62\tGold At Major Demand – Bounce or Breakdown?\tNULL\tNULL"
+    },
+    {
+      "total": "29\tEURCAD H1 | Bullish Bounce Off Pullback Support\tEURCAD\tEUR/CAD"
+    },
+    {
+      "total": "27\tGOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes\tNULL\tNULL"
+    },
+    {
+      "total": "26\tEURNZD outcome\tEURNZD\tEUR/NZD"
+    },
+    {
+      "total": "25\tThe probability of no rate cut exceeds 70%.\tNULL\tNULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n32\nid\ttitle\tsymbol\tpair\n211\tSILVER Analysis (12H)\tSILVER\tNULL\n168\tEuro’s Shine Fades: Intraday Breakdown Eyes the 1.1400 Support\tNULL\tNULL\n161\tGBPUSD long\tGBPUSD\tGBP/USD\n160\tGBPUSD Short Setup – Divergence Reversal\tGBPUSD\tGBP/USD\n158\tNASDAQ Inverse Head and Shoulders and Falling Wedge\tNULL\tNULL\n157\tAUDJPY Technical &amp; Order Flow Analysis\tAUDJPY\tAUD/JPY\n152\tAUDUSD Technical &amp; Order Flow Analysis\tAUDUSD\tAUD/USD\n131\tNQ Look strongly bearish today toward PWL (previous week low)\tNULL\tNULL\n130\tUS30 Trade Set Up Mar 18 2026\tNULL\tNULL\n129\tThe UK’s Long-Term Outlook Negative for Pound\tNULL\tNULL\n128\tUnderstanding Market Structure: An Objective Rule-Based Method\tNULL\tNULL\n125\tEURUSD- Sell on rallies\tEURUSD\tEUR/USD\n123\t#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.\tNULL\tNULL\n122\tNAS100 Trade Set Up Mar 18 2026\tNULL\tNULL\n121\tGold 30Min Engaged ( Bullish Entry Detected )\tNULL\tNULL\n62\tGold At Major Demand – Bounce or Breakdown?\tNULL\tNULL\n29\tEURCAD H1 | Bullish Bounce Off Pullback Support\tEURCAD\tEUR/CAD\n27\tGOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes\tNULL\tNULL\n26\tEURNZD outcome\tEURNZD\tEUR/NZD\n25\tThe probability of no rate cut exceeds 70%.\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1756
+}

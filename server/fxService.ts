@@ -210,6 +210,88 @@ ${newsTitles || "暂无最新新闻"}
 
 // ─── TradingView 交易想法采集 ─────────────────────────────────────────────────
 
+// G8 外汇货币对白名单
+const FOREX_SYMBOLS = new Set([
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD",
+  "EURGBP", "EURJPY", "EURCHF", "EURCAD", "EURAUD", "EURNZD",
+  "GBPJPY", "GBPCHF", "GBPCAD", "GBPAUD", "GBPNZD",
+  "CHFJPY", "CADJPY", "AUDJPY", "NZDJPY",
+  "AUDCAD", "AUDCHF", "AUDNZD", "CADCHF", "NZDCAD", "NZDCHF",
+]);
+
+// 黄金/白银符号白名单
+const METALS_SYMBOLS = new Set([
+  "XAUUSD", "XAGUSD", "GOLD", "SILVER", "XAUXAG", "XAUEUR", "XAUGBP",
+]);
+
+// 主要股指符号白名单
+const INDEX_SYMBOLS = new Set([
+  "SPX", "SPX500", "SP500", "US500", "SPY",
+  "NDX", "NAS100", "NASDAQ", "US100", "QQQ",
+  "DJI", "DJ30", "US30",
+  "DAX", "GER40", "GER30",
+  "FTSE", "UK100",
+  "NI225", "JP225",
+  "CAC40", "FRA40",
+  "ASX200", "AUS200",
+  "HSI", "HK50",
+  "VIX", "STOXX50",
+]);
+
+// 标题/描述中允许通过的关键词（无明确符号时使用）
+const ALLOWED_KEYWORDS = [
+  // 外汇
+  "forex", "fx ", "currency", "currencies",
+  "eur/usd", "gbp/usd", "usd/jpy", "usd/chf", "usd/cad", "aud/usd", "nzd/usd",
+  "eur/gbp", "eur/jpy", "gbp/jpy",
+  // 黄金白银
+  "gold", "xauusd", "xau/usd", "silver", "xagusd", "xag/usd",
+  // 股指
+  "s&p 500", "s&p500", "nasdaq", "dow jones", "dax", "ftse 100", "nikkei",
+  "hang seng", "stock index", "stock indices", "equity index",
+];
+
+// 明确排除的关键词（加密货币、个股、原油等）
+const BLOCKED_KEYWORDS = [
+  // 加密货币
+  "bitcoin", "btc", "ethereum", "eth", "crypto", "altcoin", "defi", "nft",
+  "binance", "coinbase", "solana", "sol", "xrp", "ripple", "dogecoin", "doge",
+  "bnb", "ada", "cardano", "polygon", "matic", "avax", "avalanche", "litecoin",
+  "ltc", "shiba", "pepe", "meme coin", "web3", "blockchain token",
+  // 原油/大宗商品（非黄金）
+  "crude oil", "wti", "brent", "natural gas", "natgas", "lumber", "copper",
+  "wheat", "corn", "soybean", "coffee", "cocoa", "sugar", "cotton",
+  // 个股
+  "apple", "aapl", "tesla", "tsla", "amazon", "amzn", "google", "googl",
+  "meta", "nvidia", "nvda", "microsoft", "msft", "netflix", "nflx",
+];
+
+function isAllowedIdea(title: string, description: string | null, symbol: string | null): boolean {
+  const text = (title + " " + (description || "")).toLowerCase();
+
+  // 先检查明确排除的关键词
+  for (const blocked of BLOCKED_KEYWORDS) {
+    if (text.includes(blocked)) return false;
+  }
+
+  // 如果有明确的符号，按白名单判断
+  if (symbol) {
+    if (FOREX_SYMBOLS.has(symbol)) return true;
+    if (METALS_SYMBOLS.has(symbol)) return true;
+    if (INDEX_SYMBOLS.has(symbol)) return true;
+    // 有符号但不在任何白名单内，拒绝
+    return false;
+  }
+
+  // 没有明确符号，用关键词匹配
+  for (const kw of ALLOWED_KEYWORDS) {
+    if (text.includes(kw)) return true;
+  }
+
+  // 无法判断品种，默认拒绝
+  return false;
+}
+
 // 货币对符号映射：将 TradingView 的 symbol 转为标准格式
 const SYMBOL_TO_PAIR: Record<string, string> = {
   EURUSD: "EUR/USD", GBPUSD: "GBP/USD", USDJPY: "USD/JPY", USDCHF: "USD/CHF",
@@ -220,6 +302,8 @@ const SYMBOL_TO_PAIR: Record<string, string> = {
   CHFJPY: "CHF/JPY", CADJPY: "CAD/JPY", AUDJPY: "AUD/JPY", NZDJPY: "NZD/JPY",
   AUDCAD: "AUD/CAD", AUDCHF: "AUD/CHF", AUDNZD: "AUD/NZD",
   CADCHF: "CAD/CHF", NZDCAD: "NZD/CAD", NZDCHF: "NZD/CHF",
+  // 黄金/白银
+  XAUUSD: "XAU/USD", XAGUSD: "XAG/USD",
 };
 
 function parseTvIdeas(xml: string): InsertTvIdea[] {
@@ -245,19 +329,39 @@ function parseTvIdeas(xml: string): InsertTvIdea[] {
     // 从标题或内容中提取货币对符号
     let symbol: string | null = null;
     let pair: string | null = null;
+
     // 先尝试从 hint 属性提取（如 TRADENATION:USDJPY）
-    const symbolHint = block.match(/hint=['"][^:'"]+:([A-Z]{6})['"]/);
+    const symbolHint = block.match(/hint=['"][^:'"]+:([A-Z]{3,8})['"]/);
     if (symbolHint) {
       symbol = symbolHint[1];
       pair = SYMBOL_TO_PAIR[symbol] || null;
     }
-    // 如果没有，尝试从标题提取
+    // 如果没有，尝试从标题提取6字母外汇符号
     if (!symbol) {
       const titleMatch = title.match(/\b([A-Z]{6})\b/);
-      if (titleMatch && SYMBOL_TO_PAIR[titleMatch[1]]) {
-        symbol = titleMatch[1];
-        pair = SYMBOL_TO_PAIR[symbol];
+      if (titleMatch) {
+        const candidate = titleMatch[1];
+        if (FOREX_SYMBOLS.has(candidate) || METALS_SYMBOLS.has(candidate)) {
+          symbol = candidate;
+          pair = SYMBOL_TO_PAIR[symbol] || null;
+        }
       }
+    }
+    // 尝试从标题提取黄金/白银关键词
+    if (!symbol) {
+      const titleLower = title.toLowerCase();
+      if (titleLower.includes("gold") || titleLower.includes("xauusd") || titleLower.includes("xau/usd")) {
+        symbol = "XAUUSD";
+        pair = "XAU/USD";
+      } else if (titleLower.includes("silver") || titleLower.includes("xagusd") || titleLower.includes("xag/usd")) {
+        symbol = "XAGUSD";
+        pair = "XAG/USD";
+      }
+    }
+
+    // 过滤：只保留外汇、黄金/白银、股指相关内容
+    if (!isAllowedIdea(title, description, symbol)) {
+      continue;
     }
 
     items.push({
@@ -310,7 +414,7 @@ export async function runFullUpdate(): Promise<{
     console.error("[FXService] TradingView ideas fetch error:", e);
   }
 
-  // 2. 生成市场洞察
+  // 3. 生成市场洞察
   let insightGenerated = false;
   try {
     await generateTodayInsight(today);
@@ -319,7 +423,7 @@ export async function runFullUpdate(): Promise<{
     console.error("[FXService] Failed to generate insight:", e);
   }
 
-  // 3. 生成货币展望
+  // 4. 生成货币展望
   let outlooksGenerated = 0;
   try {
     await generateCurrencyOutlooks(today);

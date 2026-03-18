@@ -1,0 +1,226 @@
+{
+  "query": "SELECT id, title, symbol, pair FROM tv_ideas ORDER BY id DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT id, title, symbol, pair FROM tv_ideas ORDER BY id DESC;",
+  "rows": [
+    {
+      "id": "211",
+      "title": "SILVER Analysis (12H)",
+      "symbol": "SILVER",
+      "pair": "NULL"
+    },
+    {
+      "id": "168",
+      "title": "Euro’s Shine Fades: Intraday Breakdown Eyes the 1.1400 Support",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "163",
+      "title": "Patience on Entry",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "162",
+      "title": "UKOIL | Brent Oil Rebounds to $108, Is a Sharp Drop Still Ahead?",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "161",
+      "title": "GBPUSD long",
+      "symbol": "GBPUSD",
+      "pair": "GBP/USD"
+    },
+    {
+      "id": "160",
+      "title": "GBPUSD Short Setup – Divergence Reversal",
+      "symbol": "GBPUSD",
+      "pair": "GBP/USD"
+    },
+    {
+      "id": "159",
+      "title": "Blazerusholdings Reviews: Understanding Correlation Breaks",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "158",
+      "title": "NASDAQ Inverse Head and Shoulders and Falling Wedge",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "157",
+      "title": "AUDJPY Technical &amp; Order Flow Analysis",
+      "symbol": "AUDJPY",
+      "pair": "AUD/JPY"
+    },
+    {
+      "id": "156",
+      "title": "Reasons for the sharp drop and subsequent strategies.",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "152",
+      "title": "AUDUSD Technical &amp; Order Flow Analysis",
+      "symbol": "AUDUSD",
+      "pair": "AUD/USD"
+    },
+    {
+      "id": "131",
+      "title": "NQ Look strongly bearish today toward PWL (previous week low)",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "130",
+      "title": "US30 Trade Set Up Mar 18 2026",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "129",
+      "title": "The UK’s Long-Term Outlook Negative for Pound",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "128",
+      "title": "Understanding Market Structure: An Objective Rule-Based Method",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "125",
+      "title": "EURUSD- Sell on rallies",
+      "symbol": "EURUSD",
+      "pair": "EUR/USD"
+    },
+    {
+      "id": "123",
+      "title": "#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "122",
+      "title": "NAS100 Trade Set Up Mar 18 2026",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "121",
+      "title": "Gold 30Min Engaged ( Bullish Entry Detected )",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "62",
+      "title": "Gold At Major Demand – Bounce or Breakdown?",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "29",
+      "title": "EURCAD H1 | Bullish Bounce Off Pullback Support",
+      "symbol": "EURCAD",
+      "pair": "EUR/CAD"
+    },
+    {
+      "id": "27",
+      "title": "GOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "26",
+      "title": "EURNZD outcome",
+      "symbol": "EURNZD",
+      "pair": "EUR/NZD"
+    },
+    {
+      "id": "25",
+      "title": "The probability of no rate cut exceeds 70%.",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "24",
+      "title": "GOLD — Hits 4-Week Low as Fed Uncertainty Weighs",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "22",
+      "title": "USDCHF H1 | Bearish Reaction Off Key Resistance",
+      "symbol": "USDCHF",
+      "pair": "USD/CHF"
+    },
+    {
+      "id": "21",
+      "title": "EURCAD",
+      "symbol": "EURCAD",
+      "pair": "EUR/CAD"
+    },
+    {
+      "id": "15",
+      "title": "AUDUSD",
+      "symbol": "AUDUSD",
+      "pair": "AUD/USD"
+    },
+    {
+      "id": "14",
+      "title": "GBPUSD H1 | Bullish Bounce Off Overlap Support",
+      "symbol": "GBPUSD",
+      "pair": "GBP/USD"
+    },
+    {
+      "id": "13",
+      "title": "USDJPY: Bullish After News 🇺🇸🇯🇵",
+      "symbol": "USDJPY",
+      "pair": "USD/JPY"
+    },
+    {
+      "id": "11",
+      "title": "DXY New H4 Supply Created. High Probability of Bearish Correctio",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "9",
+      "title": "GBPCAD H1 | Bullish Bounce Off Pullback Support",
+      "symbol": "GBPCAD",
+      "pair": "GBP/CAD"
+    },
+    {
+      "id": "5",
+      "title": "I open sell ( gold ) xauusd from 4992",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "4",
+      "title": "DOW JONES rejected on its 4H MA50 again.",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "3",
+      "title": "Gold Trade Set Up Mar 18 2026",
+      "symbol": "NULL",
+      "pair": "NULL"
+    },
+    {
+      "id": "2",
+      "title": "EURUSD Short: Rejected at 1.1550 Supply, Downside Toward 1.1450",
+      "symbol": "EURUSD",
+      "pair": "EUR/USD"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tsymbol\tpair\n211\tSILVER Analysis (12H)\tSILVER\tNULL\n168\tEuro’s Shine Fades: Intraday Breakdown Eyes the 1.1400 Support\tNULL\tNULL\n163\tPatience on Entry\tNULL\tNULL\n162\tUKOIL | Brent Oil Rebounds to $108, Is a Sharp Drop Still Ahead?\tNULL\tNULL\n161\tGBPUSD long\tGBPUSD\tGBP/USD\n160\tGBPUSD Short Setup – Divergence Reversal\tGBPUSD\tGBP/USD\n159\tBlazerusholdings Reviews: Understanding Correlation Breaks\tNULL\tNULL\n158\tNASDAQ Inverse Head and Shoulders and Falling Wedge\tNULL\tNULL\n157\tAUDJPY Technical &amp; Order Flow Analysis\tAUDJPY\tAUD/JPY\n156\tReasons for the sharp drop and subsequent strategies.\tNULL\tNULL\n152\tAUDUSD Technical &amp; Order Flow Analysis\tAUDUSD\tAUD/USD\n131\tNQ Look strongly bearish today toward PWL (previous week low)\tNULL\tNULL\n130\tUS30 Trade Set Up Mar 18 2026\tNULL\tNULL\n129\tThe UK’s Long-Term Outlook Negative for Pound\tNULL\tNULL\n128\tUnderstanding Market Structure: An Objective Rule-Based Method\tNULL\tNULL\n125\tEURUSD- Sell on rallies\tEURUSD\tEUR/USD\n123\t#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.\tNULL\tNULL\n122\tNAS100 Trade Set Up Mar 18 2026\tNULL\tNULL\n121\tGold 30Min Engaged ( Bullish Entry Detected )\tNULL\tNULL\n62\tGold At Major Demand – Bounce or Breakdown?\tNULL\tNULL\n29\tEURCAD H1 | Bullish Bounce Off Pullback Support\tEURCAD\tEUR/CAD\n27\tGOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes\tNULL\tNULL\n26\tEURNZD outcome\tEURNZD\tEUR/NZD\n25\tThe probability of no rate cut exceeds 70%.\tNULL\tNULL\n24\tGOLD — Hits 4-Week Low as Fed Uncertainty Weighs\tNULL\tNULL\n22\tUSDCHF H1 | Bearish Reaction Off Key Resistance\tUSDCHF\tUSD/CHF\n21\tEURCAD\tEURCAD\tEUR/CAD\n15\tAUDUSD\tAUDUSD\tAUD/USD\n14\tGBPUSD H1 | Bullish Bounce Off Overlap Support\tGBPUSD\tGBP/USD\n13\tUSDJPY: Bullish After News 🇺🇸🇯🇵\tUSDJPY\tUSD/JPY\n11\tDXY New H4 Supply Created. High Probability of Bearish Correctio\tNULL\tNULL\n9\tGBPCAD H1 | Bullish Bounce Off Pullback Support\tGBPCAD\tGBP/CAD\n5\tI open sell ( gold ) xauusd from 4992\tNULL\tNULL\n4\tDOW JONES rejected on its 4H MA50 again.\tNULL\tNULL\n3\tGold Trade Set Up Mar 18 2026\tNULL\tNULL\n2\tEURUSD Short: Rejected at 1.1550 Supply, Downside Toward 1.1450\tEURUSD\tEUR/USD\n",
+  "stderr": "",
+  "execution_time_ms": 1621
+}

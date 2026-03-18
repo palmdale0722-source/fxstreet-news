@@ -1,0 +1,150 @@
+{
+  "query": "DESCRIBE tv_ideas; SELECT id, title, symbol, pair FROM tv_ideas LIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute DESCRIBE tv_ideas; SELECT id, title, symbol, pair FROM tv_ideas LIMIT 50;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "guid",
+      "Type": "varchar(512)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "title",
+      "Type": "text",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "link",
+      "Type": "varchar(1024)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "author",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "symbol",
+      "Type": "varchar(30)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "pair",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "imageUrl",
+      "Type": "varchar(1024)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "publishedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    }
+  ],
+  "messages": [
+    "id\ttitle\tsymbol\tpair",
+    "1\t#DASH/USDT – Bullish Breakout Setup | 1H Chart Analys\tNULL\tNULL",
+    "2\tEURUSD Short: Rejected at 1.1550 Supply, Downside Toward 1.1450\tEURUSD\tEUR/USD",
+    "3\tGold Trade Set Up Mar 18 2026\tNULL\tNULL",
+    "4\tDOW JONES rejected on its 4H MA50 again.\tNULL\tNULL",
+    "5\tI open sell ( gold ) xauusd from 4992\tNULL\tNULL",
+    "6\tCRUDE OIL (WTI): Updated Support &amp; Resistance Analysis\tNULL\tNULL",
+    "7\tBitcoin Cash | The Outlier\tNULL\tNULL",
+    "8\tW (USA) - Wayfair showing signs a reversal to the upside is near\tNULL\tNULL",
+    "9\tGBPCAD H1 | Bullish Bounce Off Pullback Support\tGBPCAD\tGBP/CAD",
+    "10\t#MAGIC/USDT Bullish Reversal in MAGICUSDT Accumulation Zone\tNULL\tNULL",
+    "11\tDXY New H4 Supply Created. High Probability of Bearish Correctio\tNULL\tNULL",
+    "12\tELSH is still in a downtrend\tNULL\tNULL",
+    "13\tUSDJPY: Bullish After News 🇺🇸🇯🇵\tUSDJPY\tUSD/JPY",
+    "14\tGBPUSD H1 | Bullish Bounce Off Overlap Support\tGBPUSD\tGBP/USD",
+    "15\tAUDUSD\tAUDUSD\tAUD/USD",
+    "16\tGemini (GEMI) Crashes 5.1% to $6.75 – Citi Downgrades to Sell\tNULL\tNULL",
+    "17\tMajor breakout delivered as expected\tNULL\tNULL",
+    "18\tBTCUSDT: Trend Support Retest Could Drive Price Back to 74.5K\tNULL\tNULL",
+    "19\tMajor breakout delivered as expected\tNULL\tNULL",
+    "20\tsell idea\tNULL\tNULL",
+    "21\tEURCAD\tEURCAD\tEUR/CAD",
+    "22\tUSDCHF H1 | Bearish Reaction Off Key Resistance\tUSDCHF\tUSD/CHF",
+    "23\t70K First. 66K Next\tNULL\tNULL",
+    "24\tGOLD — Hits 4-Week Low as Fed Uncertainty Weighs\tNULL\tNULL",
+    "25\tThe probability of no rate cut exceeds 70%.\tNULL\tNULL",
+    "26\tEURNZD outcome\tEURNZD\tEUR/NZD",
+    "27\tGOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes\tNULL\tNULL",
+    "28\tIntel Corporation (INTC): Price Approaching Support Level\tNULL\tNULL",
+    "29\tEURCAD H1 | Bullish Bounce Off Pullback Support\tEURCAD\tEUR/CAD",
+    "30\tArchrock: Pullback in Domestic Natural Gas Servicer\tNULL\tNULL",
+    "61\t$ETH 1D Update: Small dump, but looks good\tNULL\tNULL",
+    "62\tGold At Major Demand – Bounce or Breakdown?\tNULL\tNULL",
+    "63\tBTCUSD Retest of H4 Demand and Bullish Correction Continuation\tNULL\tNULL",
+    "121\tGold 30Min Engaged ( Bullish Entry Detected )\tNULL\tNULL",
+    "122\tNAS100 Trade Set Up Mar 18 2026\tNULL\tNULL",
+    "123\t#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.\tNULL\tNULL",
+    "124\tSpain and tungsten: impact on defense\tNULL\tNULL",
+    "125\tEURUSD- Sell on rallies\tEURUSD\tEUR/USD",
+    "126\tBTC outlook at $73,000 post-volatility\tNULL\tNULL",
+    "127\tLTM- Bounce could trigger a reversal\tNULL\tNULL",
+    "128\tUnderstanding Market Structure: An Objective Rule-Based Method\tNULL\tNULL",
+    "129\tThe UK’s Long-Term Outlook Negative for Pound\tNULL\tNULL",
+    "130\tUS30 Trade Set Up Mar 18 2026\tNULL\tNULL",
+    "131\tNQ Look strongly bearish today toward PWL (previous week low)\tNULL\tNULL",
+    "151\tMASR is still trading within an uptrend channel\tNULL\tNULL",
+    "152\tAUDUSD Technical &amp; Order Flow Analysis\tAUDUSD\tAUD/USD",
+    "153\t$LOBSTAR Pullback = Opportunity?\tNULL\tNULL",
+    "154\tShort Ideas on $QQQ [Day Trade]\tNULL\tNULL",
+    "155\tBTC\tNULL\tNULL",
+    "156\tReasons for the sharp drop and subsequent strategies.\tNULL\tNULL"
+  ],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nguid\tvarchar(512)\tNO\tUNI\tNULL\t\ntitle\ttext\tNO\t\tNULL\t\nlink\tvarchar(1024)\tNO\t\tNULL\t\ndescription\ttext\tYES\t\tNULL\t\nauthor\tvarchar(255)\tYES\t\tNULL\t\nsymbol\tvarchar(30)\tYES\t\tNULL\t\npair\tvarchar(20)\tYES\t\tNULL\t\nimageUrl\tvarchar(1024)\tYES\t\tNULL\t\npublishedAt\ttimestamp\tNO\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nid\ttitle\tsymbol\tpair\n1\t#DASH/USDT – Bullish Breakout Setup | 1H Chart Analys\tNULL\tNULL\n2\tEURUSD Short: Rejected at 1.1550 Supply, Downside Toward 1.1450\tEURUSD\tEUR/USD\n3\tGold Trade Set Up Mar 18 2026\tNULL\tNULL\n4\tDOW JONES rejected on its 4H MA50 again.\tNULL\tNULL\n5\tI open sell ( gold ) xauusd from 4992\tNULL\tNULL\n6\tCRUDE OIL (WTI): Updated Support &amp; Resistance Analysis\tNULL\tNULL\n7\tBitcoin Cash | The Outlier\tNULL\tNULL\n8\tW (USA) - Wayfair showing signs a reversal to the upside is near\tNULL\tNULL\n9\tGBPCAD H1 | Bullish Bounce Off Pullback Support\tGBPCAD\tGBP/CAD\n10\t#MAGIC/USDT Bullish Reversal in MAGICUSDT Accumulation Zone\tNULL\tNULL\n11\tDXY New H4 Supply Created. High Probability of Bearish Correctio\tNULL\tNULL\n12\tELSH is still in a downtrend\tNULL\tNULL\n13\tUSDJPY: Bullish After News 🇺🇸🇯🇵\tUSDJPY\tUSD/JPY\n14\tGBPUSD H1 | Bullish Bounce Off Overlap Support\tGBPUSD\tGBP/USD\n15\tAUDUSD\tAUDUSD\tAUD/USD\n16\tGemini (GEMI) Crashes 5.1% to $6.75 – Citi Downgrades to Sell\tNULL\tNULL\n17\tMajor breakout delivered as expected\tNULL\tNULL\n18\tBTCUSDT: Trend Support Retest Could Drive Price Back to 74.5K\tNULL\tNULL\n19\tMajor breakout delivered as expected\tNULL\tNULL\n20\tsell idea\tNULL\tNULL\n21\tEURCAD\tEURCAD\tEUR/CAD\n22\tUSDCHF H1 | Bearish Reaction Off Key Resistance\tUSDCHF\tUSD/CHF\n23\t70K First. 66K Next\tNULL\tNULL\n24\tGOLD — Hits 4-Week Low as Fed Uncertainty Weighs\tNULL\tNULL\n25\tThe probability of no rate cut exceeds 70%.\tNULL\tNULL\n26\tEURNZD outcome\tEURNZD\tEUR/NZD\n27\tGOLD Melted , Is There A Good Place For Buy &amp; Sell ? Yes\tNULL\tNULL\n28\tIntel Corporation (INTC): Price Approaching Support Level\tNULL\tNULL\n29\tEURCAD H1 | Bullish Bounce Off Pullback Support\tEURCAD\tEUR/CAD\n30\tArchrock: Pullback in Domestic Natural Gas Servicer\tNULL\tNULL\n61\t$ETH 1D Update: Small dump, but looks good\tNULL\tNULL\n62\tGold At Major Demand – Bounce or Breakdown?\tNULL\tNULL\n63\tBTCUSD Retest of H4 Demand and Bullish Correction Continuation\tNULL\tNULL\n121\tGold 30Min Engaged ( Bullish Entry Detected )\tNULL\tNULL\n122\tNAS100 Trade Set Up Mar 18 2026\tNULL\tNULL\n123\t#XAGUSD(SILVER): Massive Drop Incoming Targeting $30.\tNULL\tNULL\n124\tSpain and tungsten: impact on defense\tNULL\tNULL\n125\tEURUSD- Sell on rallies\tEURUSD\tEUR/USD\n126\tBTC outlook at $73,000 post-volatility\tNULL\tNULL\n127\tLTM- Bounce could trigger a reversal\tNULL\tNULL\n128\tUnderstanding Market Structure: An Objective Rule-Based Method\tNULL\tNULL\n129\tThe UK’s Long-Term Outlook Negative for Pound\tNULL\tNULL\n130\tUS30 Trade Set Up Mar 18 2026\tNULL\tNULL\n131\tNQ Look strongly bearish today toward PWL (previous week low)\tNULL\tNULL\n151\tMASR is still trading within an uptrend channel\tNULL\tNULL\n152\tAUDUSD Technical &amp; Order Flow Analysis\tAUDUSD\tAUD/USD\n153\t$LOBSTAR Pullback = Opportunity?\tNULL\tNULL\n154\tShort Ideas on $QQQ [Day Trade]\tNULL\tNULL\n155\tBTC\tNULL\tNULL\n156\tReasons for the sharp drop and subsequent strategies.\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1821
+}
