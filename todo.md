@@ -98,3 +98,13 @@
 - [x] 前端：对话界面顶部显示 MT4 连接状态指示器（在线/离线、最后推送时间）
 - [x] MQL4 EA：编写 FXStreetBridge.mq4，28对、M15、每15分钟推送、含 API 密钥鉴权
 - [x] 安装说明：mt4/README.md 详细安装步骤
+
+## TradingView 交易想法采集
+- [x] 数据库：新增 tv_ideas 表（存储 TradingView 交易想法）
+- [x] 后端：实现 TradingView RSS 采集函数（解析货币对、作者、图表图片）
+- [x] 后端：定时任务每小时采集一次 TradingView 外汇交易想法
+- [x] 后端：tRPC ideas.getRecent 接口（支持货币对筛选）
+- [x] 后端：AI 分析师上下文注入相关货币对的 TradingView 社区观点（最新 5 条）
+- [x] 前端：导航栏添加“交易想法”入口
+- [x] 前端：/ideas 页面，展示 TradingView 交易想法列表（含图表缩略图、作者、货币对标签）
+- [x] 前端：支持按货币对筛选

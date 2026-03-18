@@ -22,6 +22,8 @@ import {
   updateAgentSessionTitle,
   getNewsContextForAgent,
   getLatestInsightAndOutlooks,
+  getRecentTvIdeas,
+  getTvIdeasForAgent,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -224,12 +226,13 @@ export const appRouter = router({
         const history = await getAgentMessages(input.sessionId);
         const recentHistory = history.slice(-10);
 
-        // 3. 获取数据库上下文 + 实时行情（并行）
-        const [newsCtx, { insight, outlooks: outlookList }, forexQuote, mt4BarsData] = await Promise.all([
+        // 3. 获取数据库上下文 + 实时行情 + TradingView 想法（并行）
+        const [newsCtx, { insight, outlooks: outlookList }, forexQuote, mt4BarsData, tvIdeasCtx] = await Promise.all([
           getNewsContextForAgent(20),
           getLatestInsightAndOutlooks(),
           input.pair ? getForexQuote(input.pair) : Promise.resolve(null),
           input.pair ? getMt4Bars(input.pair, 100, "M15") : Promise.resolve([]),
+          input.pair ? getTvIdeasForAgent(input.pair, 5) : Promise.resolve([]),
         ]);
 
         // 4. 构建系统 Prompt
@@ -263,17 +266,24 @@ export const appRouter = router({
           quoteSection = `注意：${input.pair} 实时行情数据暂时无法获取，请基于新闻和展望数据进行分析。`;
         }
 
+        // TradingView 社区想法块
+        const tvIdeasSection = tvIdeasCtx.length > 0
+          ? tvIdeasCtx.map((idea: (typeof tvIdeasCtx)[0], i: number) =>
+              `${i + 1}. [${idea.author || '匿名'}] ${idea.title}${idea.description ? ' - ' + idea.description.slice(0, 150) : ''} (${new Date(idea.publishedAt).toLocaleDateString('zh-CN')}) 来源: ${idea.link}`
+            ).join('\n')
+          : '';
+
         const systemPrompt = `你是一位专业的外汇交易分析师，擅长 G8 货币对的技术分析和基本面分析。今天是 ${today}，当前关注的货币对：${pairFocus}。
 
 你的分析能力包括：
 - 趋势分析：多周期趋势判断（日线、周线、月线）
 - 关键点位：支撑位、阻力位、目标位、止损位
-- 技术指标：RSI、MACD、布林带、均线系统、波浪理论、斐波常用比例
+- 技术指标：RSI、MACD、布林带、均线系统、波浪理论、斯波常用比例
 - 入场时机：具体的入场区间、止损设置和目标位
 - 风险评估：风险收益比、仓位管理建议
 - 市场情绪：基于新闻和展望的情绪分析
 
-${quoteSection ? `【实时行情与技术指标（来自 Yahoo Finance）】\n${quoteSection}\n\n` : ""}当前数据库最新市场信息：
+${quoteSection ? `【实时行情与技术指标（来自 ${dataSource}）】\n${quoteSection}\n\n` : ''}当前数据库最新市场信息：
 
 【最新新闻（近 20 条）】
 ${newsSection}
@@ -283,13 +293,14 @@ ${outlookSection}
 
 【今日市场洞察】
 ${insightSection}
-
+${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx.length} 条）】\n${tvIdeasSection}\n` : ''}
 回答要求：
 - 使用中文回答
 - 优先基于上方实时行情数据中的具体价格和技术指标进行分析，不要使用假设性数字
 - 关键点位用具体数字表示（如 1.0850），结合实时数据中的支撑阻力区间
 - 分析要有逻辑层次：先判断市场环境，再给出技术分析，最后提出具体操作建议
-- 如果用户问的是具体货币对，请给出详细的技术分析和操作计划（含入场、止损、目标位）`;
+- 如果用户问的是具体货币对，请给出详细的技术分析和操作计划（含入场、止损、目标位）
+- 如果 TradingView 社区有相关分析，可适当参考并注明来源作者`;
 
         // 5. 调用 LLM
         const llmMessages = [
@@ -331,6 +342,18 @@ ${insightSection}
     getApiKey: protectedProcedure.query(() => {
       return { apiKey: process.env.MT4_API_KEY || "mt4-bridge-key-change-me" };
     }),
+  }),
+
+  // ─── TradingView 交易想法路由
+  ideas: router({
+    getRecent: publicProcedure
+      .input(z.object({
+        pair: z.string().optional(),
+        limit: z.number().min(1).max(100).default(30),
+      }))
+      .query(async ({ input }) => {
+        return await getRecentTvIdeas(input.limit, input.pair);
+      }),
   }),
 
   // ─── 管理路由（手动触发更新）──────────────────────────────────────────────

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `tv_ideas` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`guid` varchar(512) NOT NULL,\n\t`title` text NOT NULL,\n\t`link` varchar(1024) NOT NULL,\n\t`description` text,\n\t`author` varchar(255),\n\t`symbol` varchar(30),\n\t`pair` varchar(20),\n\t`imageUrl` varchar(1024),\n\t`publishedAt` timestamp NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `tv_ideas_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `tv_ideas_guid_unique` UNIQUE(`guid`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE `tv_ideas` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`guid` varchar(512) NOT NULL,\n\t`title` text NOT NULL,\n\t`link` varchar(1024) NOT NULL,\n\t`description` text,\n\t`author` varchar(255),\n\t`symbol` varchar(30),\n\t`pair` varchar(20),\n\t`imageUrl` varchar(1024),\n\t`publishedAt` timestamp NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `tv_ideas_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `tv_ideas_guid_unique` UNIQUE(`guid`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2622
+}

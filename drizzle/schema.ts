@@ -171,3 +171,22 @@ export const mt4Status = mysqlTable("mt4_status", {
 
 export type Mt4Status = typeof mt4Status.$inferSelect;
 export type InsertMt4Status = typeof mt4Status.$inferInsert;
+
+// ─── TradingView 交易想法表 ─────────────────────────────────────────────
+// 存储从 TradingView RSS 采集的外汇交易想法
+export const tvIdeas = mysqlTable("tv_ideas", {
+  id: int("id").autoincrement().primaryKey(),
+  guid: varchar("guid", { length: 512 }).notNull().unique(),   // RSS item guid，用于去重
+  title: text("title").notNull(),
+  link: varchar("link", { length: 1024 }).notNull(),
+  description: text("description"),                           // 文章摘要
+  author: varchar("author", { length: 255 }),                  // 作者名称
+  symbol: varchar("symbol", { length: 30 }),                   // 货币对，如 EURUSD
+  pair: varchar("pair", { length: 20 }),                       // 标准格式，如 EUR/USD
+  imageUrl: varchar("imageUrl", { length: 1024 }),             // 图表截图 URL
+  publishedAt: timestamp("publishedAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TvIdea = typeof tvIdeas.$inferSelect;
+export type InsertTvIdea = typeof tvIdeas.$inferInsert;

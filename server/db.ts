@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -279,4 +279,50 @@ export async function getLatestInsightAndOutlooks() {
   const insightRows = await db.select().from(insights).orderBy(desc(insights.generatedAt)).limit(1);
   const outlookRows = await db.select().from(outlooks).orderBy(desc(outlooks.generatedAt)).limit(8);
   return { insight: insightRows[0] ?? null, outlooks: outlookRows };
+}
+// ─── TradingView 交易想法 ──────────────────────────────────────────────────────
+
+export async function insertTvIdeas(items: InsertTvIdea[]): Promise<number> {
+  const db = await getDb();
+  if (!db || items.length === 0) return 0;
+  let inserted = 0;
+  for (const item of items) {
+    try {
+      await db.insert(tvIdeas).values(item).onDuplicateKeyUpdate({ set: { title: item.title } });
+      inserted++;
+    } catch (e) {
+      // 忽略重复插入错误
+    }
+  }
+  return inserted;
+}
+
+export async function getRecentTvIdeas(limit = 30, pair?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (pair) {
+    const symbol = pair.replace("/", "");
+    return db.select().from(tvIdeas)
+      .where(eq(tvIdeas.symbol, symbol))
+      .orderBy(desc(tvIdeas.publishedAt))
+      .limit(limit);
+  }
+  return db.select().from(tvIdeas)
+    .orderBy(desc(tvIdeas.publishedAt))
+    .limit(limit);
+}
+
+export async function getTvIdeasForAgent(pair: string, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  const symbol = pair.replace("/", "");
+  const exact = await db.select().from(tvIdeas)
+    .where(eq(tvIdeas.symbol, symbol))
+    .orderBy(desc(tvIdeas.publishedAt))
+    .limit(limit);
+  if (exact.length >= 3) return exact;
+  const general = await db.select().from(tvIdeas)
+    .orderBy(desc(tvIdeas.publishedAt))
+    .limit(limit);
+  return [...exact, ...general.filter((g: { symbol: string | null }) => g.symbol !== symbol)].slice(0, limit);
 }

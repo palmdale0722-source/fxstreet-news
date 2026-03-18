@@ -1,5 +1,6 @@
 import { invokeLLM } from "./_core/llm";
-import { insertNewsItems, upsertInsight, upsertOutlook, getRecentNews, getAnalysisArticles } from "./db";
+import { insertNewsItems, upsertInsight, upsertOutlook, getRecentNews, getAnalysisArticles, insertTvIdeas } from "./db";
+import type { InsertTvIdea } from "../drizzle/schema";
 import type { InsertNews } from "../drizzle/schema";
 
 const CURRENCIES = ["EUR", "USD", "JPY", "AUD", "GBP", "NZD", "CHF", "CAD"] as const;
@@ -207,7 +208,88 @@ ${newsTitles || "暂无最新新闻"}
   }
 }
 
-// ─── 全量更新 ─────────────────────────────────────────────────────────────────
+// ─── TradingView 交易想法采集 ─────────────────────────────────────────────────
+
+// 货币对符号映射：将 TradingView 的 symbol 转为标准格式
+const SYMBOL_TO_PAIR: Record<string, string> = {
+  EURUSD: "EUR/USD", GBPUSD: "GBP/USD", USDJPY: "USD/JPY", USDCHF: "USD/CHF",
+  USDCAD: "USD/CAD", AUDUSD: "AUD/USD", NZDUSD: "NZD/USD",
+  EURGBP: "EUR/GBP", EURJPY: "EUR/JPY", EURCHF: "EUR/CHF", EURCAD: "EUR/CAD",
+  EURAUD: "EUR/AUD", EURNZD: "EUR/NZD",
+  GBPJPY: "GBP/JPY", GBPCHF: "GBP/CHF", GBPCAD: "GBP/CAD", GBPAUD: "GBP/AUD", GBPNZD: "GBP/NZD",
+  CHFJPY: "CHF/JPY", CADJPY: "CAD/JPY", AUDJPY: "AUD/JPY", NZDJPY: "NZD/JPY",
+  AUDCAD: "AUD/CAD", AUDCHF: "AUD/CHF", AUDNZD: "AUD/NZD",
+  CADCHF: "CAD/CHF", NZDCAD: "NZD/CAD", NZDCHF: "NZD/CHF",
+};
+
+function parseTvIdeas(xml: string): InsertTvIdea[] {
+  const items: InsertTvIdea[] = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let match;
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const block = match[1];
+    const title = extractTag(block, "title");
+    const link = extractTag(block, "link") || extractTag(block, "guid");
+    const guid = extractTag(block, "guid") || link;
+    const description = extractTag(block, "description");
+    const author = extractTag(block, "dc:creator") || extractTag(block, "author");
+    const pubDate = extractTag(block, "pubDate");
+    if (!title || !link || !guid) continue;
+    const publishedAt = pubDate ? new Date(pubDate) : new Date();
+    if (isNaN(publishedAt.getTime())) continue;
+
+    // 提取图表截图 URL
+    const imgMatch = block.match(/src=['"]([^'"]*tradingview\.com[^'"]*_mid\.png)['"]/);
+    const imageUrl = imgMatch ? imgMatch[1] : null;
+
+    // 从标题或内容中提取货币对符号
+    let symbol: string | null = null;
+    let pair: string | null = null;
+    // 先尝试从 hint 属性提取（如 TRADENATION:USDJPY）
+    const symbolHint = block.match(/hint=['"][^:'"]+:([A-Z]{6})['"]/);
+    if (symbolHint) {
+      symbol = symbolHint[1];
+      pair = SYMBOL_TO_PAIR[symbol] || null;
+    }
+    // 如果没有，尝试从标题提取
+    if (!symbol) {
+      const titleMatch = title.match(/\b([A-Z]{6})\b/);
+      if (titleMatch && SYMBOL_TO_PAIR[titleMatch[1]]) {
+        symbol = titleMatch[1];
+        pair = SYMBOL_TO_PAIR[symbol];
+      }
+    }
+
+    items.push({
+      guid,
+      title,
+      link,
+      description: description ? description.slice(0, 500) : null,
+      author: author || null,
+      symbol,
+      pair,
+      imageUrl,
+      publishedAt,
+    });
+  }
+  return items;
+}
+
+export async function fetchAndStoreTvIdeas(): Promise<number> {
+  const url = "https://www.tradingview.com/feed/?sort=recent&type=idea&market=forex";
+  try {
+    const xml = await fetchRSS(url);
+    const items = parseTvIdeas(xml);
+    const count = await insertTvIdeas(items);
+    console.log(`[FXService] TradingView ideas: fetched ${items.length}, inserted ${count}`);
+    return count;
+  } catch (e) {
+    console.error("[FXService] TradingView RSS fetch error:", e);
+    return 0;
+  }
+}
+
+// ─── 全量更新 ─────────────────────────────────────────────────────────────────────────────────
 
 export async function runFullUpdate(): Promise<{
   newsCount: number;
@@ -220,6 +302,13 @@ export async function runFullUpdate(): Promise<{
 
   // 1. 抓取 RSS
   const { newsCount, analysisCount } = await fetchAndStoreNews();
+
+  // 2. 采集 TradingView 交易想法
+  try {
+    await fetchAndStoreTvIdeas();
+  } catch (e) {
+    console.error("[FXService] TradingView ideas fetch error:", e);
+  }
 
   // 2. 生成市场洞察
   let insightGenerated = false;

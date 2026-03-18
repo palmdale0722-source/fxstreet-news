@@ -308,6 +308,12 @@ function Navbar({
             <BrainCircuit className="w-3.5 h-3.5" />
             AI 分析师
           </Link>
+          <Link href="/ideas"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
+            style={{ background: "oklch(0.50 0.15 250 / 0.15)", color: "oklch(0.70 0.15 250)", border: "1px solid oklch(0.50 0.15 250 / 0.30)" }}>
+            <TrendingUp className="w-3.5 h-3.5" />
+            交易想法
+          </Link>
           {loading ? (
             <Skeleton className="h-8 w-20" />
           ) : user ? (
