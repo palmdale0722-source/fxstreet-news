@@ -278,3 +278,28 @@ export const tradingSystem = mysqlTable("trading_system", {
 
 export type TradingSystem = typeof tradingSystem.$inferSelect;
 export type InsertTradingSystem = typeof tradingSystem.$inferInsert;
+
+// ─── 自定义 AI 对话会话表 ─────────────────────────────────────────────────────
+// 用户使用自定义 API 进行的对话会话
+export const customAiSessions = mysqlTable("custom_ai_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull().default("新对话"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CustomAiSession = typeof customAiSessions.$inferSelect;
+export type InsertCustomAiSession = typeof customAiSessions.$inferInsert;
+
+// ─── 自定义 AI 对话消息表 ─────────────────────────────────────────────────────
+export const customAiMessages = mysqlTable("custom_ai_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  role: mysqlEnum("role", ["user", "assistant", "system"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CustomAiMessage = typeof customAiMessages.$inferSelect;
+export type InsertCustomAiMessage = typeof customAiMessages.$inferInsert;

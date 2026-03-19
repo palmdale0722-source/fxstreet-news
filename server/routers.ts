@@ -546,7 +546,83 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
         return { success: true };
       }),
   }),
-  // ─── 管理路由（手动触发更新）──────────────────────────────────────────────────────
+  //   // ─── 自定义 AI 对话路由（代理转发用户自定义 API）──────────────────────────────────────
+  customAI: router({
+    // 代理转发到用户自定义的 OpenAI 兼容 API
+    chat: publicProcedure
+      .input(z.object({
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+        messages: z.array(z.object({
+          role: z.enum(["system", "user", "assistant"]),
+          content: z.string(),
+        })),
+        temperature: z.number().min(0).max(2).optional().default(0.7),
+        maxTokens: z.number().min(1).max(32768).optional().default(4096),
+      }))
+      .mutation(async ({ input }) => {
+        // 规范化 API URL：确保以 /chat/completions 结尾
+        let apiUrl = input.apiUrl.trim().replace(/\/$/, "");
+        if (!apiUrl.endsWith("/chat/completions")) {
+          if (apiUrl.endsWith("/v1")) {
+            apiUrl = apiUrl + "/chat/completions";
+          } else if (!apiUrl.includes("/v1")) {
+            apiUrl = apiUrl + "/v1/chat/completions";
+          } else {
+            apiUrl = apiUrl + "/chat/completions";
+          }
+        }
+        const payload = {
+          model: input.model,
+          messages: input.messages,
+          temperature: input.temperature,
+          max_tokens: input.maxTokens,
+        };
+        let response: Response;
+        try {
+          response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${input.apiKey}`,
+            },
+            body: JSON.stringify(payload),
+          });
+        } catch (err) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `无法连接到 API 服务器：${err instanceof Error ? err.message : String(err)}`,
+          });
+        }
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `API 请求失败 (${response.status} ${response.statusText})：${errorText.slice(0, 300)}`,
+          });
+        }
+        const data = await response.json() as {
+          choices?: Array<{ message?: { content?: string } }>;
+          error?: { message?: string };
+        };
+        if (data.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `API 返回错误：${data.error.message || JSON.stringify(data.error)}`,
+          });
+        }
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "API 返回了空内容，请检查模型名称是否正确",
+          });
+        }
+        return { content };
+      }),
+  }),
+  // ─── 管理路由（手动触发更新）──────────────────────────────────────────────
   admin: router({
     triggerUpdate: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
