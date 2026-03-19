@@ -190,3 +190,91 @@ export const tvIdeas = mysqlTable("tv_ideas", {
 
 export type TvIdea = typeof tvIdeas.$inferSelect;
 export type InsertTvIdea = typeof tvIdeas.$inferInsert;
+
+// ─── MT4 自定义指标信号表 ─────────────────────────────────────────────────────
+// 存储 MT4 EA 推送的自定义指标当前值和信号
+export const mt4IndicatorSignals = mysqlTable("mt4_indicator_signals", {
+  id: int("id").autoincrement().primaryKey(),
+  symbol: varchar("symbol", { length: 20 }).notNull(),         // 货币对，如 EURUSD
+  timeframe: varchar("timeframe", { length: 10 }).notNull(),   // 时间周期，如 M15
+  indicatorName: varchar("indicatorName", { length: 128 }).notNull(), // 指标名称
+  value1: text("value1"),   // 指标值1（主值）
+  value2: text("value2"),   // 指标值2（副值/信号线）
+  value3: text("value3"),   // 指标值3（可选）
+  signal: mysqlEnum("signal", ["buy", "sell", "neutral", "overbought", "oversold"]).default("neutral"),
+  description: text("description"), // 信号描述，如 "趋势向上，RSI=72 超买"
+  pushedAt: timestamp("pushedAt").defaultNow().notNull(),
+});
+
+export type Mt4IndicatorSignal = typeof mt4IndicatorSignals.$inferSelect;
+export type InsertMt4IndicatorSignal = typeof mt4IndicatorSignals.$inferInsert;
+
+// ─── MT4 指标配置表 ──────────────────────────────────────────────────────────
+// 用户配置哪些自定义指标需要推送，以及如何解读其信号
+export const mt4IndicatorConfigs = mysqlTable("mt4_indicator_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  indicatorName: varchar("indicatorName", { length: 128 }).notNull().unique(), // 指标文件名（不含.ex4）
+  displayName: varchar("displayName", { length: 128 }).notNull(),  // 显示名称
+  indicatorType: mysqlEnum("indicatorType", ["trend", "oscillator", "volume", "custom"]).default("custom"),
+  params: text("params"),         // JSON 格式的参数列表
+  interpretation: text("interpretation").notNull(), // 解读规则，如 "值>0表示上涨趋势，值<0表示下跌趋势"
+  bufferIndex: int("bufferIndex").default(0), // 主要读取的 buffer 索引
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Mt4IndicatorConfig = typeof mt4IndicatorConfigs.$inferSelect;
+export type InsertMt4IndicatorConfig = typeof mt4IndicatorConfigs.$inferInsert;
+
+// ─── 历史交易记录表 ──────────────────────────────────────────────────────────
+// 用户手动输入的历史交易记录，用于 AI 分析参考
+export const tradeJournal = mysqlTable("trade_journal", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  pair: varchar("pair", { length: 20 }).notNull(),              // 货币对，如 EUR/USD
+  direction: mysqlEnum("direction", ["buy", "sell"]).notNull(), // 方向
+  entryPrice: text("entryPrice").notNull(),                     // 入场价格
+  exitPrice: text("exitPrice"),                                 // 出场价格（未平仓可为空）
+  stopLoss: text("stopLoss"),                                   // 止损价格
+  takeProfit: text("takeProfit"),                               // 止盈价格
+  lotSize: text("lotSize"),                                     // 手数
+  pnl: text("pnl"),                                            // 盈亏（点数或金额）
+  openTime: timestamp("openTime").notNull(),                    // 开仓时间
+  closeTime: timestamp("closeTime"),                            // 平仓时间
+  status: mysqlEnum("status", ["open", "closed", "cancelled"]).default("closed").notNull(),
+  summary: text("summary"),     // 交易简介：为什么入场、当时的市场背景
+  lesson: text("lesson"),       // 交易复盘：经验教训
+  tags: varchar("tags", { length: 512 }), // 标签，逗号分隔，如 "突破,趋势跟随,盈利"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TradeJournal = typeof tradeJournal.$inferSelect;
+export type InsertTradeJournal = typeof tradeJournal.$inferInsert;
+
+// ─── 交易体系知识库表 ────────────────────────────────────────────────────────
+// 用户输入的交易思想、分析方法、交易规则等，AI 分析时优先参考
+export const tradingSystem = mysqlTable("trading_system", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  category: mysqlEnum("category", [
+    "philosophy",    // 交易哲学与思想
+    "methodology",   // 分析方法论
+    "entry_rules",   // 入场规则
+    "exit_rules",    // 出场规则
+    "risk_management", // 风险管理
+    "pairs_preference", // 偏好货币对
+    "session_preference", // 偏好交易时段
+    "other"          // 其他
+  ]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),  // 条目标题
+  content: text("content").notNull(),                   // 详细内容
+  active: boolean("active").default(true).notNull(),    // 是否激活（注入 AI Prompt）
+  sortOrder: int("sortOrder").default(0),               // 排序
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TradingSystem = typeof tradingSystem.$inferSelect;
+export type InsertTradingSystem = typeof tradingSystem.$inferInsert;

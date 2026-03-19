@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, Minus, Globe, Zap, BarChart2,
   DollarSign, Clock, ExternalLink, Mail, LogIn, LogOut,
   RefreshCw, AlertTriangle, Lightbulb, CheckCircle2,
-  Newspaper, FileText, BrainCircuit, X, Signal
+  Newspaper, FileText, BrainCircuit, X, Signal, BookOpen
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -313,6 +313,12 @@ function Navbar({
             style={{ background: "oklch(0.50 0.15 250 / 0.15)", color: "oklch(0.70 0.15 250)", border: "1px solid oklch(0.50 0.15 250 / 0.30)" }}>
             <TrendingUp className="w-3.5 h-3.5" />
             交易想法
+          </Link>
+          <Link href="/my-system"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
+            style={{ background: "oklch(0.45 0.15 300 / 0.15)", color: "oklch(0.68 0.15 300)", border: "1px solid oklch(0.45 0.15 300 / 0.30)" }}>
+            <BookOpen className="w-3.5 h-3.5" />
+            交易体系
           </Link>
           {loading ? (
             <Skeleton className="h-8 w-20" />

@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -325,4 +325,157 @@ export async function getTvIdeasForAgent(pair: string, limit = 5) {
     .orderBy(desc(tvIdeas.publishedAt))
     .limit(limit);
   return [...exact, ...general.filter((g: { symbol: string | null }) => g.symbol !== symbol)].slice(0, limit);
+}
+
+// ─── MT4 自定义指标信号 ──────────────────────────────────────────────────────
+
+export async function upsertIndicatorSignal(signal: InsertMt4IndicatorSignal): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  // 按 symbol + timeframe + indicatorName 唯一更新
+  await db.insert(mt4IndicatorSignals).values(signal).onDuplicateKeyUpdate({
+    set: {
+      value1: signal.value1,
+      value2: signal.value2,
+      value3: signal.value3,
+      signal: signal.signal,
+      description: signal.description,
+      pushedAt: signal.pushedAt ?? new Date(),
+    },
+  });
+}
+
+export async function getIndicatorSignalsForAgent(symbol: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(mt4IndicatorSignals)
+    .where(eq(mt4IndicatorSignals.symbol, symbol))
+    .orderBy(desc(mt4IndicatorSignals.pushedAt))
+    .limit(20);
+}
+
+// ─── MT4 指标配置 ────────────────────────────────────────────────────────────
+
+export async function getIndicatorConfigs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(mt4IndicatorConfigs)
+    .where(eq(mt4IndicatorConfigs.active, true))
+    .orderBy(mt4IndicatorConfigs.id);
+}
+
+export async function getAllIndicatorConfigs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(mt4IndicatorConfigs).orderBy(mt4IndicatorConfigs.id);
+}
+
+export async function upsertIndicatorConfig(config: InsertMt4IndicatorConfig): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(mt4IndicatorConfigs).values(config).onDuplicateKeyUpdate({
+    set: {
+      displayName: config.displayName,
+      indicatorType: config.indicatorType,
+      params: config.params,
+      interpretation: config.interpretation,
+      bufferIndex: config.bufferIndex,
+      active: config.active,
+    },
+  });
+}
+
+export async function deleteIndicatorConfig(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(mt4IndicatorConfigs).where(eq(mt4IndicatorConfigs.id, id));
+}
+
+// ─── 历史交易记录 ────────────────────────────────────────────────────────────
+
+export async function getTradeJournal(userId: number, pair?: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  if (pair) {
+    return db.select().from(tradeJournal)
+      .where(and(eq(tradeJournal.userId, userId), eq(tradeJournal.pair, pair)))
+      .orderBy(desc(tradeJournal.openTime))
+      .limit(limit);
+  }
+  return db.select().from(tradeJournal)
+    .where(eq(tradeJournal.userId, userId))
+    .orderBy(desc(tradeJournal.openTime))
+    .limit(limit);
+}
+
+export async function getTradeJournalForAgent(userId: number, pair: string, limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  // 优先返回该货币对的记录，不足时补充其他货币对
+  const pairTrades = await db.select().from(tradeJournal)
+    .where(and(eq(tradeJournal.userId, userId), eq(tradeJournal.pair, pair)))
+    .orderBy(desc(tradeJournal.openTime))
+    .limit(limit);
+  if (pairTrades.length >= 5) return pairTrades;
+  const otherTrades = await db.select().from(tradeJournal)
+    .where(eq(tradeJournal.userId, userId))
+    .orderBy(desc(tradeJournal.openTime))
+    .limit(limit);
+  return [...pairTrades, ...otherTrades.filter((t: { pair: string }) => t.pair !== pair)].slice(0, limit);
+}
+
+export async function createTradeJournalEntry(entry: InsertTradeJournal): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.insert(tradeJournal).values(entry);
+  return (result[0] as { insertId: number }).insertId;
+}
+
+export async function updateTradeJournalEntry(id: number, userId: number, updates: Partial<InsertTradeJournal>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tradeJournal).set(updates).where(and(eq(tradeJournal.id, id), eq(tradeJournal.userId, userId)));
+}
+
+export async function deleteTradeJournalEntry(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(tradeJournal).where(and(eq(tradeJournal.id, id), eq(tradeJournal.userId, userId)));
+}
+
+// ─── 交易体系知识库 ──────────────────────────────────────────────────────────
+
+export async function getTradingSystem(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tradingSystem)
+    .where(eq(tradingSystem.userId, userId))
+    .orderBy(tradingSystem.sortOrder, tradingSystem.id);
+}
+
+export async function getActiveTradingSystem(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tradingSystem)
+    .where(and(eq(tradingSystem.userId, userId), eq(tradingSystem.active, true)))
+    .orderBy(tradingSystem.sortOrder, tradingSystem.id);
+}
+
+export async function createTradingSystemEntry(entry: InsertTradingSystem): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.insert(tradingSystem).values(entry);
+  return (result[0] as { insertId: number }).insertId;
+}
+
+export async function updateTradingSystemEntry(id: number, userId: number, updates: Partial<InsertTradingSystem>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tradingSystem).set(updates).where(and(eq(tradingSystem.id, id), eq(tradingSystem.userId, userId)));
+}
+
+export async function deleteTradingSystemEntry(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(tradingSystem).where(and(eq(tradingSystem.id, id), eq(tradingSystem.userId, userId)));
 }

@@ -24,6 +24,21 @@ import {
   getLatestInsightAndOutlooks,
   getRecentTvIdeas,
   getTvIdeasForAgent,
+  getTradeJournal,
+  createTradeJournalEntry,
+  updateTradeJournalEntry,
+  deleteTradeJournalEntry,
+  getTradingSystem,
+  createTradingSystemEntry,
+  updateTradingSystemEntry,
+  deleteTradingSystemEntry,
+  getAllIndicatorConfigs,
+  upsertIndicatorConfig,
+  deleteIndicatorConfig,
+  getActiveTradingSystem,
+  getTradeJournalForAgent,
+  getIndicatorSignalsForAgent,
+  getIndicatorConfigs,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -226,13 +241,17 @@ export const appRouter = router({
         const history = await getAgentMessages(input.sessionId);
         const recentHistory = history.slice(-10);
 
-        // 3. 获取数据库上下文 + 实时行情 + TradingView 想法（并行）
-        const [newsCtx, { insight, outlooks: outlookList }, forexQuote, mt4BarsData, tvIdeasCtx] = await Promise.all([
+        // 3. 获取数据库上下文 + 实时行情 + TradingView 想法 + 个人体系（并行）
+        const [newsCtx, { insight, outlooks: outlookList }, forexQuote, mt4BarsData, tvIdeasCtx, tradingSystemItems, tradeHistory, indicatorSignals, indicatorConfigs] = await Promise.all([
           getNewsContextForAgent(20),
           getLatestInsightAndOutlooks(),
           input.pair ? getForexQuote(input.pair) : Promise.resolve(null),
           input.pair ? getMt4Bars(input.pair, 100, "M15") : Promise.resolve([]),
           input.pair ? getTvIdeasForAgent(input.pair, 5) : Promise.resolve([]),
+          getActiveTradingSystem(ctx.user.id),
+          input.pair ? getTradeJournalForAgent(ctx.user.id, input.pair, 5) : Promise.resolve([]),
+          input.pair ? getIndicatorSignalsForAgent(input.pair) : Promise.resolve([]),
+          getIndicatorConfigs(),
         ]);
 
         // 4. 构建系统 Prompt
@@ -273,18 +292,65 @@ export const appRouter = router({
             ).join('\n')
           : '';
 
+          // 交易体系知识库块
+        const CATEGORY_LABELS: Record<string, string> = {
+          philosophy: "交易哲学",
+          methodology: "分析方法论",
+          entry_rules: "入场规则",
+          exit_rules: "出场规则",
+          risk_management: "风险管理",
+          pairs_preference: "偏好货币对",
+          session_preference: "偏好交易时段",
+          other: "其他",
+        };
+        const tradingSystemSection = tradingSystemItems.length > 0
+          ? tradingSystemItems.map((item: (typeof tradingSystemItems)[0]) =>
+              `[${CATEGORY_LABELS[item.category] || item.category}] ${item.title}: ${item.content}`
+            ).join("\n")
+          : "";
+
+        // 历史交易记录块
+        const tradeHistorySection = tradeHistory.length > 0
+          ? tradeHistory.map((t: (typeof tradeHistory)[0]) => {
+              const parts = [
+                `${t.pair} ${t.direction === 'buy' ? '买入' : '卖出'} 入场:${t.entryPrice}`,
+                t.exitPrice ? `出场:${t.exitPrice}` : null,
+                t.stopLoss ? `止损:${t.stopLoss}` : null,
+                t.takeProfit ? `止盈:${t.takeProfit}` : null,
+                t.pnl ? `盈亏:${t.pnl}` : null,
+                t.summary ? `理由:${t.summary.slice(0, 100)}` : null,
+                t.lesson ? `复盘:${t.lesson.slice(0, 100)}` : null,
+              ].filter(Boolean);
+              return `(${new Date(t.openTime).toLocaleDateString('zh-CN')}) ${parts.join(' | ')}`;
+            }).join("\n")
+          : "";
+
+        // 自定义指标信号块
+        const indicatorConfigMap = new Map(indicatorConfigs.map((c: (typeof indicatorConfigs)[0]) => [c.indicatorName, c]));
+        const indicatorSection = indicatorSignals.length > 0
+          ? indicatorSignals.map((sig: (typeof indicatorSignals)[0]) => {
+              const config = indicatorConfigMap.get(sig.indicatorName);
+              const name = config?.displayName || sig.indicatorName;
+              const interpretation = config?.interpretation || "";
+              const values = `value1=${sig.value1}${sig.value2 !== null ? `, value2=${sig.value2}` : ''}${sig.value3 !== null ? `, value3=${sig.value3}` : ''}`;
+              return `${name}: ${values}${interpretation ? ` | 解读规则: ${interpretation.slice(0, 120)}` : ''}`;
+            }).join("\n")
+          : "";
+
         const systemPrompt = `你是一位专业的外汇交易分析师，擅长 G8 货币对的技术分析和基本面分析。今天是 ${today}，当前关注的货币对：${pairFocus}。
-
-你的分析能力包括：
-- 趋势分析：多周期趋势判断（日线、周线、月线）
-- 关键点位：支撑位、阻力位、目标位、止损位
-- 技术指标：RSI、MACD、布林带、均线系统、波浪理论、斯波常用比例
-- 入场时机：具体的入场区间、止损设置和目标位
-- 风险评估：风险收益比、仓位管理建议
-- 市场情绪：基于新闻和展望的情绪分析
-
-${quoteSection ? `【实时行情与技术指标（来自 ${dataSource}）】\n${quoteSection}\n\n` : ''}当前数据库最新市场信息：
-
+${tradingSystemSection ? `
+【交易者个人交易体系与方法论（最高优先级，分析时必须遵循）】
+${tradingSystemSection}
+` : ''}
+${indicatorSection ? `【自定义 MT4 指标实时信号】
+${indicatorSection}
+` : ''}
+${tradeHistorySection ? `【该货币对近期历史交易记录（供参考）】
+${tradeHistorySection}
+` : ''}
+${quoteSection ? `【实时行情与技术指标（来自 ${dataSource}）】
+${quoteSection}
+` : ''}
 【最新新闻（近 20 条）】
 ${newsSection}
 
@@ -296,7 +362,10 @@ ${insightSection}
 ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx.length} 条）】\n${tvIdeasSection}\n` : ''}
 回答要求：
 - 使用中文回答
-- 优先基于上方实时行情数据中的具体价格和技术指标进行分析，不要使用假设性数字
+- 如果交易者有个人交易体系，必须优先按照其交易哲学、方法论和规则进行分析，不要违背其规则
+- 如果有自定义指标信号，必须将其纳入分析并按照解读规则说明信号含义
+- 如果有历史交易记录，可将当前市场与历史交易进行对比，识别类似模式
+- 优先基于实时行情数据中的具体价格和技术指标进行分析，不要使用假设性数字
 - 关键点位用具体数字表示（如 1.0850），结合实时数据中的支撑阻力区间
 - 分析要有逻辑层次：先判断市场环境，再给出技术分析，最后提出具体操作建议
 - 如果用户问的是具体货币对，请给出详细的技术分析和操作计划（含入场、止损、目标位）
@@ -355,8 +424,129 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
         return await getRecentTvIdeas(input.limit, input.pair);
       }),
   }),
-
-  // ─── 管理路由（手动触发更新）──────────────────────────────────────────────
+  // ─── 历史交易记录路由 ──────────────────────────────────────────────────────
+  tradeJournal: router({
+    list: protectedProcedure
+      .input(z.object({ pair: z.string().optional(), limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        return await getTradeJournal(ctx.user.id, input.pair, input.limit);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        pair: z.string(),
+        direction: z.enum(["buy", "sell"]),
+        entryPrice: z.string(),
+        exitPrice: z.string().optional(),
+        stopLoss: z.string().optional(),
+        takeProfit: z.string().optional(),
+        lotSize: z.string().optional(),
+        pnl: z.string().optional(),
+        openTime: z.date(),
+        closeTime: z.date().optional(),
+        status: z.enum(["open", "closed", "cancelled"]).default("closed"),
+        summary: z.string().optional(),
+        lesson: z.string().optional(),
+        tags: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createTradeJournalEntry({ ...input, userId: ctx.user.id });
+        return { id };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        pair: z.string().optional(),
+        direction: z.enum(["buy", "sell"]).optional(),
+        entryPrice: z.string().optional(),
+        exitPrice: z.string().optional(),
+        stopLoss: z.string().optional(),
+        takeProfit: z.string().optional(),
+        lotSize: z.string().optional(),
+        pnl: z.string().optional(),
+        openTime: z.date().optional(),
+        closeTime: z.date().optional(),
+        status: z.enum(["open", "closed", "cancelled"]).optional(),
+        summary: z.string().optional(),
+        lesson: z.string().optional(),
+        tags: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...updates } = input;
+        await updateTradeJournalEntry(id, ctx.user.id, updates);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteTradeJournalEntry(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+  // ─── 交易体系知识库路由 ──────────────────────────────────────────────────────
+  tradingSystem: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await getTradingSystem(ctx.user.id);
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        category: z.enum(["philosophy", "methodology", "entry_rules", "exit_rules", "risk_management", "pairs_preference", "session_preference", "other"]),
+        title: z.string().min(1).max(255),
+        content: z.string().min(1),
+        active: z.boolean().default(true),
+        sortOrder: z.number().default(0),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createTradingSystemEntry({ ...input, userId: ctx.user.id });
+        return { id };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        category: z.enum(["philosophy", "methodology", "entry_rules", "exit_rules", "risk_management", "pairs_preference", "session_preference", "other"]).optional(),
+        title: z.string().min(1).max(255).optional(),
+        content: z.string().min(1).optional(),
+        active: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...updates } = input;
+        await updateTradingSystemEntry(id, ctx.user.id, updates);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteTradingSystemEntry(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+  // ─── MT4 指标配置路由 ────────────────────────────────────────────────────────────────
+  indicatorConfig: router({
+    list: protectedProcedure.query(async () => {
+      return await getAllIndicatorConfigs();
+    }),
+    upsert: protectedProcedure
+      .input(z.object({
+        indicatorName: z.string().min(1).max(128),
+        displayName: z.string().min(1).max(128),
+        indicatorType: z.enum(["trend", "oscillator", "volume", "custom"]).default("custom"),
+        params: z.string().optional(),
+        interpretation: z.string().min(1),
+        bufferIndex: z.number().default(0),
+        active: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        await upsertIndicatorConfig(input);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteIndicatorConfig(input.id);
+        return { success: true };
+      }),
+  }),
+  // ─── 管理路由（手动触发更新）──────────────────────────────────────────────────────
   admin: router({
     triggerUpdate: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {

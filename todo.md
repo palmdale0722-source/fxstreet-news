@@ -112,3 +112,16 @@
 ## TradingView 交易想法过滤
 - [x] 后端：采集时过滤无关品种，只保留外汇、黄金（XAU/XAG）、股指相关内容（白名单+黑名单双重过滤）
 - [x] 数据库：清理已入库的无关条目（删除加密货币、个股、原油等）
+
+## AI 分析师强化 - 个人专属交易顾问
+- [x] 数据库：新增 mt4_indicator_signals 表（自定义指标信号）
+- [x] 数据库：新增 trade_journal 表（历史交易记录）
+- [x] 数据库：新增 trading_system 表（交易思想与体系知识库）
+- [x] 数据库：新增 mt4_indicator_configs 表（指标配置管理）
+- [x] 后端：更新 mt4Routes.ts，新增 /api/mt4/indicator-signal 自定义指标信号接收接口
+- [x] 后端：新增 tRPC indicatorConfig 路由（增删改查）
+- [x] 后端：新增 tRPC tradeJournal 路由（增删改查）
+- [x] 后端：新增 tRPC tradingSystem 路由（增删改查）
+- [x] 前端：新增 /my-system 「交易体系」管理页面（交易体系、历史交易记录、指标配置三个标签页）
+- [x] 后端：更新 AI 分析师系统 Prompt，注入交易体系、自定义指标信号、历史交易记录全部上下文
+- [x] 前端：导航栏添加「交易体系」入口

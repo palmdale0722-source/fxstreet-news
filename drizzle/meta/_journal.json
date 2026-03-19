@@ -43,6 +43,13 @@
       "when": 1773838859562,
       "tag": "0005_smooth_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773899193797,
+      "tag": "0006_magenta_lester",
+      "breakpoints": true
     }
   ]
 }
