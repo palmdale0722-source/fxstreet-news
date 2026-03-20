@@ -1,0 +1,17 @@
+{
+  "query": "SELECT clientId, accountNumber, broker, symbolsCount, lastPushedAt FROM mt4_status ORDER BY lastPushedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT clientId, accountNumber, broker, symbolsCount, lastPushedAt FROM mt4_status ORDER BY lastPushedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "clientId": "mt4-client-01",
+      "accountNumber": "11068407",
+      "broker": "TradeMax Global Limited",
+      "symbolsCount": "28",
+      "lastPushedAt": "2026-03-20 17:12:05"
+    }
+  ],
+  "messages": [],
+  "stdout": "clientId\taccountNumber\tbroker\tsymbolsCount\tlastPushedAt\nmt4-client-01\t11068407\tTradeMax Global Limited\t28\t2026-03-20 17:12:05\n",
+  "stderr": "",
+  "execution_time_ms": 1603
+}

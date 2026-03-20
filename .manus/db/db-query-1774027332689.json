@@ -1,0 +1,150 @@
+{
+  "query": "SELECT symbol, COUNT(*) as bar_count, MAX(pushedAt) as last_pushed FROM mt4_bars GROUP BY symbol ORDER BY last_pushed DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT symbol, COUNT(*) as bar_count, MAX(pushedAt) as last_pushed FROM mt4_bars GROUP BY symbol ORDER BY last_pushed DESC LIMIT 30;",
+  "rows": [
+    {
+      "symbol": "NZDCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:12:04"
+    },
+    {
+      "symbol": "NZDCAD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:12:02"
+    },
+    {
+      "symbol": "CADCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:12:01"
+    },
+    {
+      "symbol": "AUDNZD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:59"
+    },
+    {
+      "symbol": "AUDCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:57"
+    },
+    {
+      "symbol": "AUDCAD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:55"
+    },
+    {
+      "symbol": "NZDJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:54"
+    },
+    {
+      "symbol": "AUDJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:52"
+    },
+    {
+      "symbol": "CADJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:50"
+    },
+    {
+      "symbol": "CHFJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:48"
+    },
+    {
+      "symbol": "GBPNZD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:47"
+    },
+    {
+      "symbol": "GBPAUD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:45"
+    },
+    {
+      "symbol": "GBPCAD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:43"
+    },
+    {
+      "symbol": "GBPCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:41"
+    },
+    {
+      "symbol": "GBPJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:40"
+    },
+    {
+      "symbol": "EURNZD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:38"
+    },
+    {
+      "symbol": "EURAUD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:36"
+    },
+    {
+      "symbol": "EURCAD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:35"
+    },
+    {
+      "symbol": "EURCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:33"
+    },
+    {
+      "symbol": "EURJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:31"
+    },
+    {
+      "symbol": "EURGBP",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:29"
+    },
+    {
+      "symbol": "NZDUSD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:27"
+    },
+    {
+      "symbol": "AUDUSD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:25"
+    },
+    {
+      "symbol": "USDCAD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:24"
+    },
+    {
+      "symbol": "USDCHF",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:22"
+    },
+    {
+      "symbol": "USDJPY",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:20"
+    },
+    {
+      "symbol": "GBPUSD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:18"
+    },
+    {
+      "symbol": "EURUSD",
+      "bar_count": "100",
+      "last_pushed": "2026-03-20 17:11:16"
+    }
+  ],
+  "messages": [],
+  "stdout": "symbol\tbar_count\tlast_pushed\nNZDCHF\t100\t2026-03-20 17:12:04\nNZDCAD\t100\t2026-03-20 17:12:02\nCADCHF\t100\t2026-03-20 17:12:01\nAUDNZD\t100\t2026-03-20 17:11:59\nAUDCHF\t100\t2026-03-20 17:11:57\nAUDCAD\t100\t2026-03-20 17:11:55\nNZDJPY\t100\t2026-03-20 17:11:54\nAUDJPY\t100\t2026-03-20 17:11:52\nCADJPY\t100\t2026-03-20 17:11:50\nCHFJPY\t100\t2026-03-20 17:11:48\nGBPNZD\t100\t2026-03-20 17:11:47\nGBPAUD\t100\t2026-03-20 17:11:45\nGBPCAD\t100\t2026-03-20 17:11:43\nGBPCHF\t100\t2026-03-20 17:11:41\nGBPJPY\t100\t2026-03-20 17:11:40\nEURNZD\t100\t2026-03-20 17:11:38\nEURAUD\t100\t2026-03-20 17:11:36\nEURCAD\t100\t2026-03-20 17:11:35\nEURCHF\t100\t2026-03-20 17:11:33\nEURJPY\t100\t2026-03-20 17:11:31\nEURGBP\t100\t2026-03-20 17:11:29\nNZDUSD\t100\t2026-03-20 17:11:27\nAUDUSD\t100\t2026-03-20 17:11:25\nUSDCAD\t100\t2026-03-20 17:11:24\nUSDCHF\t100\t2026-03-20 17:11:22\nUSDJPY\t100\t2026-03-20 17:11:20\nGBPUSD\t100\t2026-03-20 17:11:18\nEURUSD\t100\t2026-03-20 17:11:16\n",
+  "stderr": "",
+  "execution_time_ms": 1630
+}

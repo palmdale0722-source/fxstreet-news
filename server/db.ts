@@ -348,8 +348,10 @@ export async function upsertIndicatorSignal(signal: InsertMt4IndicatorSignal): P
 export async function getIndicatorSignalsForAgent(symbol: string) {
   const db = await getDb();
   if (!db) return [];
+  // 统一格式：去掉斜杠并转大写，与数据库存储格式一致（如 EURUSD）
+  const normalizedSymbol = symbol.replace("/", "").toUpperCase();
   return db.select().from(mt4IndicatorSignals)
-    .where(eq(mt4IndicatorSignals.symbol, symbol))
+    .where(eq(mt4IndicatorSignals.symbol, normalizedSymbol))
     .orderBy(desc(mt4IndicatorSignals.pushedAt))
     .limit(20);
 }
@@ -411,9 +413,11 @@ export async function getTradeJournal(userId: number, pair?: string, limit = 50)
 export async function getTradeJournalForAgent(userId: number, pair: string, limit = 10) {
   const db = await getDb();
   if (!db) return [];
+  // 统一格式：保留斜杠格式（如 EUR/USD），与前端输入一致
+  const normalizedPair = pair.includes("/") ? pair : `${pair.slice(0, 3)}/${pair.slice(3)}`;
   // 优先返回该货币对的记录，不足时补充其他货币对
   const pairTrades = await db.select().from(tradeJournal)
-    .where(and(eq(tradeJournal.userId, userId), eq(tradeJournal.pair, pair)))
+    .where(and(eq(tradeJournal.userId, userId), eq(tradeJournal.pair, normalizedPair)))
     .orderBy(desc(tradeJournal.openTime))
     .limit(limit);
   if (pairTrades.length >= 5) return pairTrades;
@@ -421,7 +425,7 @@ export async function getTradeJournalForAgent(userId: number, pair: string, limi
     .where(eq(tradeJournal.userId, userId))
     .orderBy(desc(tradeJournal.openTime))
     .limit(limit);
-  return [...pairTrades, ...otherTrades.filter((t: { pair: string }) => t.pair !== pair)].slice(0, limit);
+  return [...pairTrades, ...otherTrades.filter((t: { pair: string }) => t.pair !== normalizedPair)].slice(0, limit);
 }
 
 export async function createTradeJournalEntry(entry: InsertTradeJournal): Promise<number> {
