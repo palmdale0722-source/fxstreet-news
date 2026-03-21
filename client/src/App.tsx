@@ -9,7 +9,6 @@ import Signals from "./pages/Signals";
 import Agent from "./pages/Agent";
 import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
-import MyAI from "./pages/MyAI";
 
 function Router() {
   return (
@@ -19,7 +18,7 @@ function Router() {
       <Route path={"/agent"} component={Agent} />
       <Route path={"/ideas"} component={Ideas} />
       <Route path={"/my-system"} component={MySystem} />
-      <Route path={"/my-ai"} component={MyAI} />
+      <Route path={"/my-ai"}>{() => { window.location.replace("/agent"); return null; }}</Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

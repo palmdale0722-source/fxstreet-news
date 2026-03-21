@@ -320,12 +320,6 @@ function Navbar({
             <BookOpen className="w-3.5 h-3.5" />
             交易体系
           </Link>
-          <Link href="/my-ai"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
-            style={{ background: "oklch(0.55 0.18 230 / 0.15)", color: "oklch(0.65 0.18 230)", border: "1px solid oklch(0.55 0.18 230 / 0.30)" }}>
-            <Sparkles className="w-3.5 h-3.5" />
-            我的 AI
-          </Link>
           {loading ? (
             <Skeleton className="h-8 w-20" />
           ) : user ? (

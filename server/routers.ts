@@ -228,6 +228,12 @@ export const appRouter = router({
         sessionId: z.number(),
         message: z.string().min(1).max(2000),
         pair: z.string().optional(),  // 当前关注的货币对
+        // 用户自带 API 配置
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+        temperature: z.number().min(0).max(2).optional().default(0.7),
+        maxTokens: z.number().min(256).max(32768).optional().default(4096),
       }))
       .mutation(async ({ input, ctx }) => {
         // 1. 存入用户消息
@@ -378,8 +384,57 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
           { role: "user" as const, content: input.message },
         ];
 
-        const response = await invokeLLM({ messages: llmMessages });
-        const rawContent = response.choices[0]?.message?.content;
+        // 规范化用户 API URL
+        let apiUrl = input.apiUrl.trim().replace(/\/$/, "");
+        if (!apiUrl.endsWith("/chat/completions")) {
+          if (apiUrl.endsWith("/v1")) {
+            apiUrl = apiUrl + "/chat/completions";
+          } else if (!apiUrl.includes("/v1")) {
+            apiUrl = apiUrl + "/v1/chat/completions";
+          } else {
+            apiUrl = apiUrl + "/chat/completions";
+          }
+        }
+
+        let fetchResponse: Response;
+        try {
+          fetchResponse = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${input.apiKey}`,
+            },
+            body: JSON.stringify({
+              model: input.model,
+              messages: llmMessages,
+              temperature: input.temperature,
+              max_tokens: input.maxTokens,
+            }),
+          });
+        } catch (err) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `无法连接到 AI API：${err instanceof Error ? err.message : String(err)}`,
+          });
+        }
+        if (!fetchResponse.ok) {
+          const errText = await fetchResponse.text().catch(() => "");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `AI API 请求失败 (${fetchResponse.status})：${errText.slice(0, 300)}`,
+          });
+        }
+        const responseData = await fetchResponse.json() as {
+          choices?: Array<{ message?: { content?: string } }>;
+          error?: { message?: string };
+        };
+        if (responseData.error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `AI API 返回错误：${responseData.error.message || JSON.stringify(responseData.error)}`,
+          });
+        }
+        const rawContent = responseData.choices?.[0]?.message?.content;
         const assistantContent: string = typeof rawContent === "string" ? rawContent : (rawContent ? JSON.stringify(rawContent) : "暂无回复");
 
         // 6. 存入 AI 回复

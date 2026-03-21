@@ -5,32 +5,237 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   MessageSquare, Plus, Trash2, Send, Bot, User,
   TrendingUp, TrendingDown, ChevronLeft, Loader2, BarChart2, ArrowLeftRight,
-  Lightbulb, ShieldAlert, Target, Clock, Wifi, WifiOff, Sparkles
+  Lightbulb, ShieldAlert, Target, Clock, Wifi, WifiOff,
+  Settings, Key, Globe, Cpu, AlertCircle, CheckCircle2, X, BookOpen,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 
-// 实时价格标签组件
+// ─── API 配置类型 ────────────────────────────────────────────────────────────
+type ApiConfig = {
+  apiUrl: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+};
+
+const STORAGE_KEY_CONFIG = "agent_api_config";
+
+const DEFAULT_CONFIG: ApiConfig = {
+  apiUrl: "",
+  apiKey: "",
+  model: "gpt-4o",
+  temperature: 0.7,
+  maxTokens: 4096,
+};
+
+const loadConfig = (): ApiConfig => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
+    if (!raw) return DEFAULT_CONFIG;
+    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_CONFIG;
+  }
+};
+
+const saveConfig = (config: ApiConfig) => {
+  localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
+};
+
+// ─── API 配置面板组件 ─────────────────────────────────────────────────────────
+function ApiSettingsPanel({
+  config,
+  onSave,
+  onClose,
+}: {
+  config: ApiConfig;
+  onSave: (config: ApiConfig) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<ApiConfig>(config);
+  const [showKey, setShowKey] = useState(false);
+
+  const handleSave = () => {
+    if (!form.apiUrl.trim()) { toast.error("请输入 API 地址"); return; }
+    if (!form.apiKey.trim()) { toast.error("请输入 API Key"); return; }
+    if (!form.model.trim()) { toast.error("请输入模型名称"); return; }
+    onSave(form);
+    toast.success("API 配置已保存");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center">
+              <Settings className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">AI 接口配置</p>
+              <p className="text-xs text-muted-foreground">配置您自己的 OpenAI 兼容 API</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 表单 */}
+        <div className="p-5 space-y-4">
+          {/* API 地址 */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Globe className="w-3.5 h-3.5 text-amber-600" />
+              API 地址 <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={form.apiUrl}
+              onChange={e => setForm(f => ({ ...f, apiUrl: e.target.value }))}
+              placeholder="https://api.openai.com  或  https://api.deepseek.com"
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              支持 OpenAI 兼容的 API，如 DeepSeek、Moonshot、Qwen 等。只需填写 Base URL，无需加 /v1/chat/completions
+            </p>
+          </div>
+
+          {/* API Key */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Key className="w-3.5 h-3.5 text-amber-600" />
+              API Key <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                type={showKey ? "text" : "password"}
+                value={form.apiKey}
+                onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
+                placeholder="sk-..."
+                className="text-sm pr-16"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded"
+              >
+                {showKey ? "隐藏" : "显示"}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              API Key 仅存储在您的浏览器本地，不会上传到服务器
+            </p>
+          </div>
+
+          {/* 模型名称 */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5 text-sm font-medium">
+              <Cpu className="w-3.5 h-3.5 text-amber-600" />
+              模型名称 <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={form.model}
+              onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
+              placeholder="gpt-4o / deepseek-chat / moonshot-v1-8k"
+              className="text-sm"
+            />
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {["gpt-4o", "gpt-4o-mini", "deepseek-chat", "deepseek-reasoner", "moonshot-v1-8k", "qwen-plus", "claude-3-5-sonnet-20241022"].map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, model: m }))}
+                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                    form.model === m
+                      ? "bg-amber-600 text-white border-amber-600"
+                      : "border-border hover:border-amber-400 hover:text-amber-600"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 高级参数 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Temperature ({form.temperature})
+              </Label>
+              <input
+                type="range" min="0" max="2" step="0.1"
+                value={form.temperature}
+                onChange={e => setForm(f => ({ ...f, temperature: parseFloat(e.target.value) }))}
+                className="w-full accent-amber-600"
+              />
+              <p className="text-xs text-muted-foreground">0=精确 / 2=创意</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">最大 Token 数</Label>
+              <Input
+                type="number" min="256" max="32768"
+                value={form.maxTokens}
+                onChange={e => setForm(f => ({ ...f, maxTokens: parseInt(e.target.value) || 4096 }))}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          {/* 说明 */}
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
+            <div className="flex items-start gap-2">
+              <BookOpen className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                AI 分析师会自动将实时 MT4 行情、新闻、货币展望、自定义指标信号、您的交易体系和历史记录注入到每次对话中，无需手动粘贴。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 p-5 pt-0">
+          <Button onClick={handleSave} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
+            <CheckCircle2 className="w-4 h-4 mr-1.5" />
+            保存配置
+          </Button>
+          <Button variant="outline" onClick={onClose} className="flex-1">取消</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 实时价格标签组件 ─────────────────────────────────────────────────────────
 function ChatHeader({
   sessionTitle,
   selectedPair,
   showPairSelector,
   setShowPairSelector,
+  apiConfig,
+  onOpenSettings,
 }: {
   sessionTitle: string;
   selectedPair: string;
   showPairSelector: boolean;
   setShowPairSelector: (v: boolean) => void;
+  apiConfig: ApiConfig;
+  onOpenSettings: () => void;
 }) {
   const { data: quote, isLoading: quoteLoading } = trpc.agent.getQuote.useQuery(
     { pair: selectedPair },
-    { refetchInterval: 30000, staleTime: 25000 } // 每 30s 自动刷新
+    { refetchInterval: 30000, staleTime: 25000 }
   );
   const { data: mt4Statuses } = trpc.mt4.getStatus.useQuery(undefined, {
-    refetchInterval: 60000, // 每分钟刷新一次
+    refetchInterval: 60000,
   });
   const mt4Online = mt4Statuses && mt4Statuses.length > 0 && mt4Statuses.some((s: { isOnline: boolean }) => s.isOnline);
   const mt4LastPush = mt4Statuses && mt4Statuses.length > 0
@@ -40,6 +245,7 @@ function ChatHeader({
       }, null as Date | null)
     : null;
 
+  const isConfigured = apiConfig.apiUrl.trim() && apiConfig.apiKey.trim() && apiConfig.model.trim();
   const isUp = quote && quote.change >= 0;
   const priceColor = quoteLoading ? "text-muted-foreground" : isUp ? "text-emerald-600" : "text-red-500";
 
@@ -53,15 +259,11 @@ function ChatHeader({
         </div>
       </div>
 
-      {/* 实时价格显示 */}
+      {/* 实时价格 */}
       {quote && (
         <div className="hidden sm:flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60">
-            {isUp ? (
-              <TrendingUp className="w-3 h-3 text-emerald-600" />
-            ) : (
-              <TrendingDown className="w-3 h-3 text-red-500" />
-            )}
+            {isUp ? <TrendingUp className="w-3 h-3 text-emerald-600" /> : <TrendingDown className="w-3 h-3 text-red-500" />}
             <span className="font-mono font-semibold text-foreground">{quote.currentPrice.toFixed(5)}</span>
             <span className={`font-mono ${priceColor}`}>
               {isUp ? "+" : ""}{quote.changePct.toFixed(3)}%
@@ -81,7 +283,7 @@ function ChatHeader({
         </div>
       )}
 
-      {/* MT4 连接状态指示器 */}
+      {/* MT4 连接状态 */}
       <div className="hidden md:flex items-center gap-1.5 text-xs">
         {mt4Online ? (
           <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
@@ -98,6 +300,19 @@ function ChatHeader({
           </div>
         )}
       </div>
+
+      {/* API 配置状态按钮 */}
+      <button
+        onClick={onOpenSettings}
+        className={`hidden md:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+          isConfigured
+            ? "border-border hover:border-amber-400 hover:text-amber-600 text-muted-foreground"
+            : "border-orange-400 text-orange-600 bg-orange-50 dark:bg-orange-900/20 animate-pulse"
+        }`}
+      >
+        <Settings className="w-3 h-3" />
+        {isConfigured ? apiConfig.model : "配置 API"}
+      </button>
 
       {/* 货币对切换 */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -116,7 +331,7 @@ function ChatHeader({
   );
 }
 
-// G8 货币对完整列表（28 对）
+// ─── G8 货币对完整列表 ────────────────────────────────────────────────────────
 const G8_PAIRS = [
   "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
   "USD/CAD", "AUD/USD", "NZD/USD",
@@ -127,7 +342,7 @@ const G8_PAIRS = [
   "CAD/CHF", "NZD/CAD", "NZD/CHF",
 ];
 
-// 快捷提问模板
+// ─── 快捷提问模板 ─────────────────────────────────────────────────────────────
 const QUICK_QUESTIONS = [
   { icon: TrendingUp, label: "趋势方向", template: (pair: string) => `${pair} 当前处于什么趋势？多周期趋势是否一致？` },
   { icon: Target, label: "关键点位", template: (pair: string) => `${pair} 当前关键支撑位和阻力位在哪里？请给出具体价格。` },
@@ -153,6 +368,7 @@ type Session = {
   updatedAt: Date;
 };
 
+// ─── 主页面组件 ───────────────────────────────────────────────────────────────
 export default function Agent() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -161,9 +377,13 @@ export default function Agent() {
   const [selectedPair, setSelectedPair] = useState<string>("EUR/USD");
   const [isSending, setIsSending] = useState(false);
   const [showPairSelector, setShowPairSelector] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(() => loadConfig());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = trpc.useUtils();
+
+  const isApiConfigured = !!(apiConfig.apiUrl.trim() && apiConfig.apiKey.trim() && apiConfig.model.trim());
 
   const { data: sessions = [], isLoading: sessionsLoading } = trpc.agent.getSessions.useQuery(
     undefined,
@@ -175,7 +395,6 @@ export default function Agent() {
     { enabled: !!activeSessionId }
   );
 
-  // 待发送的消息（新建会话后自动发送）
   const pendingMessageRef = useRef<string | null>(null);
 
   const newSessionMutation = trpc.agent.newSession.useMutation({
@@ -184,7 +403,6 @@ export default function Agent() {
       if (session) {
         setActiveSessionId(session.id);
         setMessages([]);
-        // 如果有待发送的消息，在会话建立后立即发送
         if (pendingMessageRef.current) {
           const msg = pendingMessageRef.current;
           pendingMessageRef.current = null;
@@ -197,6 +415,11 @@ export default function Agent() {
             sessionId: session.id,
             message: msg,
             pair: session.pair || selectedPair,
+            apiUrl: apiConfig.apiUrl,
+            apiKey: apiConfig.apiKey,
+            model: apiConfig.model,
+            temperature: apiConfig.temperature,
+            maxTokens: apiConfig.maxTokens,
           });
         }
       }
@@ -254,10 +477,15 @@ export default function Agent() {
     const msg = inputValue.trim();
     if (!msg || !activeSessionId || isSending) return;
 
+    if (!isApiConfigured) {
+      setShowSettings(true);
+      toast.error("请先配置 AI API 接口");
+      return;
+    }
+
     setInputValue("");
     setIsSending(true);
 
-    // 立即显示用户消息和 loading
     setMessages(prev => [
       ...prev,
       { role: "user", content: msg },
@@ -268,8 +496,13 @@ export default function Agent() {
       sessionId: activeSessionId,
       message: msg,
       pair: selectedPair,
+      apiUrl: apiConfig.apiUrl,
+      apiKey: apiConfig.apiKey,
+      model: apiConfig.model,
+      temperature: apiConfig.temperature,
+      maxTokens: apiConfig.maxTokens,
     });
-  }, [inputValue, activeSessionId, isSending, selectedPair]);
+  }, [inputValue, activeSessionId, isSending, selectedPair, apiConfig, isApiConfigured]);
 
   const handleQuickQuestion = useCallback((template: (pair: string) => string) => {
     const question = template(selectedPair);
@@ -282,6 +515,11 @@ export default function Agent() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleSaveConfig = (newConfig: ApiConfig) => {
+    setApiConfig(newConfig);
+    saveConfig(newConfig);
   };
 
   if (authLoading) {
@@ -337,18 +575,48 @@ export default function Agent() {
           </div>
         </div>
 
-        {/* 新建对话按钮 */}
-          <div className="p-3 flex-shrink-0">
+        {/* 操作按钮 */}
+        <div className="p-3 flex gap-2 flex-shrink-0">
           <Button
             onClick={handleNewSession}
             disabled={newSessionMutation.isPending}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white gap-2"
+            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
             size="sm"
           >
             {newSessionMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
             新建对话
           </Button>
+          <Button
+            onClick={() => setShowSettings(true)}
+            variant="outline"
+            size="sm"
+            className={`px-2.5 ${!isApiConfigured ? "border-orange-400 text-orange-600 hover:bg-orange-50" : ""}`}
+            title="API 配置"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </Button>
         </div>
+
+        {/* API 状态提示 */}
+        {!isApiConfigured ? (
+          <div
+            className="mx-3 mb-2 p-2.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 cursor-pointer"
+            onClick={() => setShowSettings(true)}
+          >
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+              <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">未配置 AI 接口</p>
+            </div>
+            <p className="text-xs text-orange-600 dark:text-orange-500 mt-0.5">点击右上角设置按钮配置您的 AI API</p>
+          </div>
+        ) : (
+          <div className="mx-3 mb-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 truncate">{apiConfig.model}</p>
+            </div>
+          </div>
+        )}
 
         {/* 会话列表 */}
         <div className="flex-1 overflow-y-auto px-2 min-h-0">
@@ -399,21 +667,8 @@ export default function Agent() {
           )}
         </div>
 
-        {/* 底部区域 */}
-        <div className="p-3 border-t border-border flex-shrink-0 space-y-2">
-          {/* 我的 AI 助手入口 */}
-          <Link href="/my-ai">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 cursor-pointer transition-colors">
-              <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-3 h-3 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-blue-800 dark:text-blue-200">我的 AI 助手</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">自定义 API 对话</p>
-              </div>
-            </div>
-          </Link>
-          {/* 用户信息 */}
+        {/* 底部用户信息 */}
+        <div className="p-3 border-t border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <User className="w-3.5 h-3.5 text-amber-700" />
@@ -434,8 +689,17 @@ export default function Agent() {
               </div>
               <h1 className="text-3xl font-bold font-display">AI 交易分析师</h1>
               <p className="text-muted-foreground leading-relaxed">
-                基于实时 FXStreet 新闻、AI 市场洞察和货币展望数据，为您提供专业的 G8 货币对技术分析、关键点位和交易建议。
+                接入您自己的 AI API，自动注入实时 MT4 行情、FXStreet 新闻、货币展望、自定义指标信号和您的交易体系，获取专业的 G8 货币对分析建议。
               </p>
+              {!isApiConfigured && (
+                <Button
+                  onClick={() => setShowSettings(true)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  配置 AI 接口
+                </Button>
+              )}
             </div>
 
             {/* 货币对选择 */}
@@ -466,6 +730,11 @@ export default function Agent() {
                   <button
                     key={label}
                     onClick={() => {
+                      if (!isApiConfigured) {
+                        setShowSettings(true);
+                        toast.error("请先配置 AI API 接口");
+                        return;
+                      }
                       const question = template(selectedPair);
                       pendingMessageRef.current = question;
                       newSessionMutation.mutate({ pair: selectedPair });
@@ -492,6 +761,8 @@ export default function Agent() {
               selectedPair={selectedPair}
               showPairSelector={showPairSelector}
               setShowPairSelector={setShowPairSelector}
+              apiConfig={apiConfig}
+              onOpenSettings={() => setShowSettings(true)}
             />
 
             {/* 消息列表 */}
@@ -503,7 +774,11 @@ export default function Agent() {
                   </div>
                   <div>
                     <p className="font-medium">开始对话</p>
-                    <p className="text-sm text-muted-foreground mt-1">向 AI 分析师提问关于 {selectedPair} 的任何问题</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isApiConfigured
+                        ? `向 AI 分析师提问关于 ${selectedPair} 的任何问题`
+                        : "请先点击右上角配置 AI API 接口"}
+                    </p>
                   </div>
                   {/* 快捷提问 */}
                   <div className="grid grid-cols-2 gap-2 w-full max-w-md mt-2">
@@ -534,7 +809,6 @@ export default function Agent() {
                           : <Bot className="w-4 h-4 text-white" />
                         }
                       </div>
-
                       {/* 消息气泡 */}
                       <div className={`flex-1 max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
                         <div className={`rounded-2xl px-4 py-3 ${
@@ -586,7 +860,6 @@ export default function Agent() {
                     </button>
                   ))}
                 </div>
-
                 {/* 输入框 */}
                 <div className="flex gap-2 items-end">
                   <Textarea
@@ -594,7 +867,11 @@ export default function Agent() {
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={`向 AI 分析师提问关于 ${selectedPair} 的问题... (Enter 发送，Shift+Enter 换行)`}
+                    placeholder={
+                      isApiConfigured
+                        ? `向 AI 分析师提问关于 ${selectedPair} 的问题... (Enter 发送，Shift+Enter 换行)`
+                        : "请先点击右上角⚙️配置 AI API 接口..."
+                    }
                     disabled={isSending}
                     className="flex-1 min-h-[44px] max-h-[120px] resize-none text-sm"
                     rows={1}
@@ -616,7 +893,7 @@ export default function Agent() {
         )}
       </div>
 
-      {/* 货币对选择器弹出层（portal 式 fixed 定位） */}
+      {/* 货币对选择器弹出层 */}
       {showPairSelector && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowPairSelector(false)} />
@@ -643,6 +920,15 @@ export default function Agent() {
             </div>
           </div>
         </>
+      )}
+
+      {/* API 配置面板 */}
+      {showSettings && (
+        <ApiSettingsPanel
+          config={apiConfig}
+          onSave={handleSaveConfig}
+          onClose={() => setShowSettings(false)}
+        />
       )}
     </div>
   );
