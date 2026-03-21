@@ -24,7 +24,8 @@ import {
 import {
   BookOpen, TrendingUp, TrendingDown, Settings2, Plus, Pencil, Trash2,
   ChevronLeft, CheckCircle, XCircle, BarChart2, BrainCircuit, ArrowUpRight,
-  ArrowDownRight, Clock, Tag, DollarSign, Activity, Lightbulb, LogIn
+  ArrowDownRight, Clock, Tag, DollarSign, Activity, Lightbulb, LogIn,
+  Upload, FileText, AlertCircle, CheckCircle2
 } from "lucide-react";
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
@@ -279,11 +280,292 @@ const emptyTrade = (): TradeEntry => ({
   tags: "",
 });
 
+// ─── MT4 对账单导入弹窗 ─────────────────────────────────────────────────────
+type ImportStep = "idle" | "previewing" | "importing" | "done";
+type ImportSummary = {
+  accountNumber: string;
+  accountName: string;
+  totalTrades: number;
+  closedTrades: number;
+  openTrades: number;
+  balance: string;
+  totalNetProfit: string;
+  profitFactor: string;
+  dateRange: string;
+};
+type ImportResult = {
+  inserted: number;
+  skipped: number;
+  overwritten: number;
+  total: number;
+  summary: ImportSummary;
+  parseErrors: string[];
+  message: string;
+};
+type PreviewTrade = {
+  ticket: string;
+  pair: string;
+  direction: string;
+  lotSize: string;
+  openTime: string;
+  closeTime: string | null;
+  entryPrice: string;
+  exitPrice: string | null;
+  pnl: string;
+  status: string;
+  ea: string | null;
+};
+
+function StatementImportDialog({
+  open,
+  onClose,
+  onImported,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const [step, setStep] = useState<ImportStep>("idle");
+  const [htmlContent, setHtmlContent] = useState("");
+  const [mode, setMode] = useState<"skip" | "overwrite">("skip");
+  const [previewData, setPreviewData] = useState<{ total: number; preview: PreviewTrade[]; summary: ImportSummary } | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [error, setError] = useState("");
+
+  const reset = () => {
+    setStep("idle");
+    setHtmlContent("");
+    setPreviewData(null);
+    setResult(null);
+    setError("");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setHtmlContent(text);
+      setError("");
+    };
+    reader.readAsText(file, "utf-8");
+  };
+
+  const handlePreview = async () => {
+    if (!htmlContent) { setError("请先选择文件"); return; }
+    setStep("previewing");
+    setError("");
+    try {
+      const resp = await fetch("/api/statement/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ html: htmlContent }),
+      });
+      const data = await resp.json();
+      if (!data.success) { setError(data.message || "预览失败"); setStep("idle"); return; }
+      setPreviewData(data);
+      setStep("idle");
+    } catch (err) {
+      setError("网络错误，请重试");
+      setStep("idle");
+    }
+  };
+
+  const handleImport = async () => {
+    if (!htmlContent) { setError("请先选择文件"); return; }
+    setStep("importing");
+    setError("");
+    try {
+      const resp = await fetch("/api/statement/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ html: htmlContent, mode }),
+      });
+      const data = await resp.json();
+      if (!data.success) { setError(data.message || "导入失败"); setStep("idle"); return; }
+      setResult(data);
+      setStep("done");
+      onImported();
+    } catch (err) {
+      setError("网络错误，请重试");
+      setStep("idle");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5" /> 导入 MT4 对账单
+          </DialogTitle>
+        </DialogHeader>
+
+        {step === "done" && result ? (
+          <div className="space-y-4 py-2">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="w-5 h-5" />
+              <span className="font-medium">{result.message}</span>
+            </div>
+            <div className="rounded-xl border border-border p-4 space-y-2 text-sm">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-lg p-3" style={{ background: "oklch(0.95 0.05 140)" }}>
+                  <div className="text-2xl font-bold" style={{ color: "oklch(0.45 0.15 140)" }}>{result.inserted}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">新增</div>
+                </div>
+                <div className="rounded-lg p-3" style={{ background: "oklch(0.95 0.03 0)" }}>
+                  <div className="text-2xl font-bold text-muted-foreground">{result.skipped}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">跳过（已存在）</div>
+                </div>
+                <div className="rounded-lg p-3" style={{ background: "oklch(0.95 0.05 220)" }}>
+                  <div className="text-2xl font-bold" style={{ color: "oklch(0.45 0.15 220)" }}>{result.overwritten}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">覆盖更新</div>
+                </div>
+              </div>
+              {result.summary && (
+                <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border">
+                  <div>账户：{result.summary.accountName} ({result.summary.accountNumber})</div>
+                  <div>净利润：{result.summary.totalNetProfit} | 盈利因子：{result.summary.profitFactor} | 日期范围：{result.summary.dateRange}</div>
+                </div>
+              )}
+            </div>
+            {result.parseErrors.length > 0 && (
+              <div className="rounded-lg p-3 text-xs" style={{ background: "oklch(0.97 0.03 30)" }}>
+                <div className="font-medium text-orange-700 mb-1">解析警告（{result.parseErrors.length} 条）</div>
+                <div className="text-orange-600 space-y-0.5 max-h-24 overflow-y-auto">
+                  {result.parseErrors.slice(0, 5).map((e, i) => <div key={i}>{e}</div>)}
+                  {result.parseErrors.length > 5 && <div>...还有 {result.parseErrors.length - 5} 条</div>}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => { reset(); onClose(); }}>完成</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            {/* 文件选择 */}
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">选择对账单文件</label>
+              <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-ring transition-colors">
+                <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-3">选择 MT4 导出的 <code className="bg-muted px-1 rounded">DetailedStatement.htm</code> 文件</p>
+                <input
+                  type="file"
+                  accept=".htm,.html"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="statement-file-input"
+                />
+                <label htmlFor="statement-file-input">
+                  <Button variant="outline" size="sm" asChild>
+                    <span className="cursor-pointer">选择文件</span>
+                  </Button>
+                </label>
+                {htmlContent && (
+                  <p className="text-xs text-green-600 mt-2 flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> 文件已加载（{Math.round(htmlContent.length / 1024)} KB）
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 重复处理模式 */}
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">重复订单处理方式</label>
+              <div className="flex gap-2">
+                {(["skip", "overwrite"] as const).map(m => (
+                  <button key={m}
+                    onClick={() => setMode(m)}
+                    className="flex-1 py-2 px-3 rounded-lg text-sm border transition-all"
+                    style={{
+                      background: mode === m ? "oklch(0.50 0.15 220)" : "transparent",
+                      color: mode === m ? "white" : "oklch(0.45 0.05 0)",
+                      borderColor: mode === m ? "oklch(0.50 0.15 220)" : "oklch(0.85 0.02 0)",
+                    }}
+                  >
+                    {m === "skip" ? "跳过已存在" : "覆盖更新"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mode === "skip" ? "已导入过的订单（相同 Ticket 号）将被跳过" : "已导入过的订单将用新数据覆盖"}
+              </p>
+            </div>
+
+            {/* 错误提示 */}
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-red-600 rounded-lg p-3" style={{ background: "oklch(0.97 0.03 10)" }}>
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {/* 预览结果 */}
+            {previewData && (
+              <div className="rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">解析预览</span>
+                  <span className="text-xs text-muted-foreground">共 {previewData.total} 条交易记录</span>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>账户：{previewData.summary.accountName} ({previewData.summary.accountNumber})</div>
+                  <div>净利润：{previewData.summary.totalNetProfit} | 盈利因子：{previewData.summary.profitFactor} | 日期：{previewData.summary.dateRange}</div>
+                </div>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {previewData.preview.map((t) => (
+                    <div key={t.ticket} className="flex items-center gap-2 text-xs py-1 border-b border-border/40 last:border-0">
+                      <span className="font-medium w-20 flex-shrink-0">{t.pair}</span>
+                      <span style={{ color: t.direction === "buy" ? "oklch(0.50 0.15 140)" : "oklch(0.55 0.15 10)" }}>
+                        {t.direction === "buy" ? "▲ 买" : "▼ 卖"}
+                      </span>
+                      <span className="text-muted-foreground">{t.lotSize}手</span>
+                      <span className="text-muted-foreground">{new Date(t.openTime).toLocaleDateString("zh-CN")}</span>
+                      <span className={parseFloat(t.pnl) >= 0 ? "text-green-600 ml-auto" : "text-red-500 ml-auto"}>
+                        {parseFloat(t.pnl) > 0 ? "+" : ""}{t.pnl}
+                      </span>
+                    </div>
+                  ))}
+                  {previewData.total > 10 && (
+                    <div className="text-xs text-muted-foreground text-center pt-1">...还有 {previewData.total - 10} 条</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { reset(); onClose(); }}>取消</Button>
+              <Button
+                variant="outline"
+                onClick={handlePreview}
+                disabled={!htmlContent || step === "previewing"}
+              >
+                {step === "previewing" ? "解析中..." : "预览解析结果"}
+              </Button>
+              <Button
+                onClick={handleImport}
+                disabled={!htmlContent || step === "importing"}
+                style={{ background: "oklch(0.50 0.15 140)", color: "white" }}
+              >
+                {step === "importing" ? "导入中..." : "确认导入"}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TradeJournalTab() {
   const utils = trpc.useUtils();
   const [filterPair, setFilterPair] = useState<string | undefined>(undefined);
   const { data: trades, isLoading } = trpc.tradeJournal.list.useQuery({ pair: filterPair, limit: 100 });
   const [editTrade, setEditTrade] = useState<TradeEntry | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   const createMutation = trpc.tradeJournal.create.useMutation({
     onSuccess: () => { utils.tradeJournal.list.invalidate(); setEditTrade(null); toast.success("交易记录已添加"); },
@@ -335,10 +617,15 @@ function TradeJournalTab() {
           <h2 className="text-lg font-bold text-foreground">历史交易记录</h2>
           <p className="text-sm text-muted-foreground mt-0.5">记录每笔交易的入场理由和复盘总结，AI 分析师将参考你的交易历史</p>
         </div>
-        <Button size="sm" onClick={() => setEditTrade(emptyTrade())} className="gap-1.5"
-          style={{ background: "oklch(0.50 0.15 140)", color: "white" }}>
-          <Plus className="w-4 h-4" /> 添加交易
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="gap-1.5">
+            <Upload className="w-4 h-4" /> 导入对账单
+          </Button>
+          <Button size="sm" onClick={() => setEditTrade(emptyTrade())} className="gap-1.5"
+            style={{ background: "oklch(0.50 0.15 140)", color: "white" }}>
+            <Plus className="w-4 h-4" /> 添加交易
+          </Button>
+        </div>
       </div>
 
       {/* 货币对筛选 */}
@@ -447,6 +734,13 @@ function TradeJournalTab() {
           ))}
         </div>
       )}
+
+      {/* MT4 对账单导入弹窗 */}
+      <StatementImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={() => utils.tradeJournal.list.invalidate()}
+      />
 
       {/* 编辑/新增弹窗 */}
       <Dialog open={!!editTrade} onOpenChange={(o) => { if (!o) setEditTrade(null); }}>

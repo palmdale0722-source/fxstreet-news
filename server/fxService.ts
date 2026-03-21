@@ -134,8 +134,10 @@ ${allTitles || "暂无最新新闻，请基于当前市场背景进行分析"}
     });
 
     const rawContent = response.choices[0]?.message?.content;
-    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+    let content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
     if (!content) throw new Error("Empty LLM response");
+    // 处理模型返回的 markdown 代码块包裹
+    content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     const parsed = JSON.parse(content);
     await upsertInsight({ date, ...parsed });
     console.log(`[FXService] Insight generated for ${date}`);
@@ -190,8 +192,10 @@ ${newsTitles || "暂无最新新闻"}
       });
 
       const rawContent = response.choices[0]?.message?.content;
-      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+      let content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
       if (!content) throw new Error("Empty LLM response");
+      // 处理模型返回的 markdown 代码块包裹
+      content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
       const parsed = JSON.parse(content);
       await upsertOutlook({
         date,

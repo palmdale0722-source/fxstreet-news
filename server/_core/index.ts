@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startCronJobs, startImapJobs, registerAdminRoutes } from "../cronJobs";
 import { registerMt4Routes } from "../mt4Routes";
+import { registerStatementRoutes } from "../statementRoutes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +42,8 @@ async function startServer() {
   registerAdminRoutes(app);
   // MT4 data push routes
   registerMt4Routes(app);
+  // MT4 statement import routes
+  registerStatementRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
