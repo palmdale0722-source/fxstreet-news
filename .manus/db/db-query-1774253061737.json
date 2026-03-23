@@ -1,0 +1,55 @@
+{
+  "query": "SELECT s.id, s.subject, s.fromEmail, s.receivedAt, sa.decision, sa.confidence, sa.summary FROM signals s LEFT JOIN signal_analyses sa ON s.id = sa.signalId ORDER BY s.receivedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT s.id, s.subject, s.fromEmail, s.receivedAt, sa.decision, sa.confidence, sa.summary FROM signals s LEFT JOIN signal_analyses sa ON s.id = sa.signalId ORDER BY s.receivedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "960075",
+      "subject": "TrendWave Enhanced Alert",
+      "fromEmail": "palmdale@126.com",
+      "receivedAt": "2026-03-23 08:00:56",
+      "decision": "NULL",
+      "confidence": "NULL",
+      "summary": "NULL"
+    },
+    {
+      "id": "960073",
+      "subject": "TrendWave Enhanced Alert",
+      "fromEmail": "palmdale@126.com",
+      "receivedAt": "2026-03-23 08:00:54",
+      "decision": "NULL",
+      "confidence": "NULL",
+      "summary": "NULL"
+    },
+    {
+      "id": "960074",
+      "subject": "TrendWave Enhanced Alert",
+      "fromEmail": "palmdale@126.com",
+      "receivedAt": "2026-03-23 08:00:53",
+      "decision": "NULL",
+      "confidence": "NULL",
+      "summary": "NULL"
+    },
+    {
+      "id": "960071",
+      "subject": "TrendWave Enhanced Alert",
+      "fromEmail": "palmdale@126.com",
+      "receivedAt": "2026-03-23 07:45:47",
+      "decision": "NULL",
+      "confidence": "NULL",
+      "summary": "NULL"
+    },
+    {
+      "id": "960072",
+      "subject": "TrendWave Enhanced Alert",
+      "fromEmail": "palmdale@126.com",
+      "receivedAt": "2026-03-23 07:45:47",
+      "decision": "NULL",
+      "confidence": "NULL",
+      "summary": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsubject\tfromEmail\treceivedAt\tdecision\tconfidence\tsummary\n960075\tTrendWave Enhanced Alert\tpalmdale@126.com\t2026-03-23 08:00:56\tNULL\tNULL\tNULL\n960073\tTrendWave Enhanced Alert\tpalmdale@126.com\t2026-03-23 08:00:54\tNULL\tNULL\tNULL\n960074\tTrendWave Enhanced Alert\tpalmdale@126.com\t2026-03-23 08:00:53\tNULL\tNULL\tNULL\n960071\tTrendWave Enhanced Alert\tpalmdale@126.com\t2026-03-23 07:45:47\tNULL\tNULL\tNULL\n960072\tTrendWave Enhanced Alert\tpalmdale@126.com\t2026-03-23 07:45:47\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1661
+}

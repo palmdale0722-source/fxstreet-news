@@ -132,7 +132,7 @@ function ApiSettingsPanel({
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              API Key 仅存储在您的浏览器本地，不会上传到服务器
+              API Key 会加密存储在服务器，用于交易信号自动分析通知功能
             </p>
           </div>
 
@@ -517,9 +517,28 @@ export default function Agent() {
     }
   };
 
+  const saveApiConfigMutation = trpc.userApiConfig.save.useMutation({
+    onSuccess: () => {
+      console.log("[Agent] API config synced to database for auto signal analysis");
+    },
+    onError: (err) => {
+      console.warn("[Agent] Failed to sync API config to database:", err.message);
+    },
+  });
+
   const handleSaveConfig = (newConfig: ApiConfig) => {
     setApiConfig(newConfig);
     saveConfig(newConfig);
+    // 同步写入数据库，供后台信号自动分析使用
+    if (newConfig.apiUrl.trim() && newConfig.apiKey.trim() && newConfig.model.trim()) {
+      saveApiConfigMutation.mutate({
+        apiUrl: newConfig.apiUrl,
+        apiKey: newConfig.apiKey,
+        model: newConfig.model,
+        temperature: newConfig.temperature,
+        maxTokens: newConfig.maxTokens,
+      });
+    }
   };
 
   if (authLoading) {
