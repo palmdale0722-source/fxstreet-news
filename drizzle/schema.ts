@@ -303,3 +303,41 @@ export const customAiMessages = mysqlTable("custom_ai_messages", {
 
 export type CustomAiMessage = typeof customAiMessages.$inferSelect;
 export type InsertCustomAiMessage = typeof customAiMessages.$inferInsert;
+
+// ─── 用户 AI API 配置表 ──────────────────────────────────────────────────────
+// 存储用户自带的 OpenAI 兼容 API 配置，供后台自动分析信号时使用
+export const userApiConfigs = mysqlTable("user_api_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),  // 每个用户只有一条配置
+  apiUrl: varchar("apiUrl", { length: 512 }).notNull(),
+  apiKey: varchar("apiKey", { length: 512 }).notNull(),  // 存储时加密或明文（当前明文）
+  model: varchar("model", { length: 128 }).notNull().default("gpt-4o"),
+  temperature: varchar("temperature", { length: 16 }).default("0.7"),
+  maxTokens: int("maxTokens").default(4096),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserApiConfig = typeof userApiConfigs.$inferSelect;
+export type InsertUserApiConfig = typeof userApiConfigs.$inferInsert;
+
+// ─── 信号 AI 分析结果表 ──────────────────────────────────────────────────────
+// 每条交易信号的 AI 自动分析结论
+export const signalAnalyses = mysqlTable("signal_analyses", {
+  id: int("id").autoincrement().primaryKey(),
+  signalId: int("signalId").notNull().unique(),  // 一条信号只有一条分析
+  // AI 决策结论
+  decision: mysqlEnum("decision", ["execute", "watch", "ignore"]).notNull(),
+  confidence: int("confidence").notNull().default(50),  // 置信度 0-100
+  // 分析内容
+  summary: text("summary").notNull(),          // 一句话结论
+  reasoning: text("reasoning").notNull(),      // 详细分析推理
+  marketContext: text("marketContext"),         // 当前市场背景
+  riskWarning: text("riskWarning"),            // 风险提示
+  // 元数据
+  analyzedAt: timestamp("analyzedAt").defaultNow().notNull(),
+  notified: boolean("notified").default(false).notNull(),  // 是否已推送通知
+});
+
+export type SignalAnalysis = typeof signalAnalyses.$inferSelect;
+export type InsertSignalAnalysis = typeof signalAnalyses.$inferInsert;

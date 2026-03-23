@@ -25,8 +25,15 @@ import {
   Eye,
   AlertCircle,
   LogIn,
-  BarChart2,
   ArrowLeft,
+  Bot,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ShieldAlert,
+  Loader2,
+  RotateCcw,
+  CloudUpload,
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
@@ -48,6 +55,39 @@ const STATUS_FILTERS: Array<{ value: SignalStatus | "all"; label: string }> = [
   { value: "watching", label: "观察中" },
   { value: "ignored",  label: "已忽略" },
 ];
+
+// ─── AI 决策配置 ──────────────────────────────────────────────────────────────
+type AiDecision = "execute" | "watch" | "ignore";
+
+const DECISION_CONFIG: Record<AiDecision, {
+  label: string; color: string; bg: string; border: string;
+  icon: React.ReactNode; tagline: string;
+}> = {
+  execute: {
+    label: "建议执行",
+    color: "oklch(0.40 0.15 145)",
+    bg: "oklch(0.96 0.04 145)",
+    border: "oklch(0.82 0.10 145)",
+    icon: <TrendingUp className="w-4 h-4" />,
+    tagline: "AI 认为该信号与当前市场趋势吻合，建议执行",
+  },
+  watch: {
+    label: "建议观察",
+    color: "oklch(0.50 0.14 60)",
+    bg: "oklch(0.97 0.04 75)",
+    border: "oklch(0.85 0.10 65)",
+    icon: <Eye className="w-4 h-4" />,
+    tagline: "AI 认为该信号有参考价值，但建议等待更好时机",
+  },
+  ignore: {
+    label: "建议忽略",
+    color: "oklch(0.50 0.05 250)",
+    bg: "oklch(0.96 0.02 250)",
+    border: "oklch(0.82 0.04 250)",
+    icon: <Minus className="w-4 h-4" />,
+    tagline: "AI 认为该信号与当前市场不符，建议忽略",
+  },
+};
 
 // ─── 状态徽章 ─────────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: SignalStatus }) {
@@ -97,6 +137,155 @@ function StatusSelector({ current, signalId, onUpdated }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── AI 分析结论区域 ──────────────────────────────────────────────────────────
+function AiAnalysisSection({ signalId, isLoggedIn }: { signalId: number; isLoggedIn: boolean }) {
+  const { data: analysis, isLoading, refetch } = trpc.signalAnalysis.get.useQuery(
+    { signalId },
+    { refetchInterval: (data) => (!data ? 5000 : false) }  // 未分析时每5秒轮询
+  );
+
+  const analyzeMutation = trpc.signalAnalysis.analyze.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setTimeout(() => refetch(), 3000);
+    },
+    onError: (e) => toast.error(`触发分析失败：${e.message}`),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-4 pt-4 border-t border-border/60">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          正在加载 AI 分析...
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="mt-4 pt-4 border-t border-border/60">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Bot className="w-4 h-4" />
+            <span>AI 分析</span>
+            <span className="text-xs opacity-60">（新信号将自动分析）</span>
+          </div>
+          {isLoggedIn && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1"
+              onClick={() => analyzeMutation.mutate({ signalId })}
+              disabled={analyzeMutation.isPending}
+            >
+              {analyzeMutation.isPending
+                ? <><Loader2 className="w-3 h-3 animate-spin" />分析中...</>
+                : <><Bot className="w-3 h-3" />立即分析</>
+              }
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2 italic">
+          {isLoggedIn ? "尚未分析，点击"立即分析"触发 AI 决策" : "登录后可触发 AI 分析"}
+        </p>
+      </div>
+    );
+  }
+
+  const cfg = DECISION_CONFIG[analysis.decision as AiDecision];
+
+  return (
+    <div className="mt-4 pt-4 border-t border-border/60">
+      {/* 标题行 */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <Bot className="w-4 h-4" style={{ color: "oklch(0.55 0.14 270)" }} />
+          AI 分析结论
+        </span>
+        {isLoggedIn && (
+          <button
+            onClick={() => analyzeMutation.mutate({ signalId })}
+            disabled={analyzeMutation.isPending}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            title="重新分析"
+          >
+            {analyzeMutation.isPending
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <RotateCcw className="w-3 h-3" />
+            }
+          </button>
+        )}
+      </div>
+
+      {/* 决策卡片 */}
+      <div className="rounded-xl p-4 space-y-3"
+        style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+        {/* 决策标签 + 置信度 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2" style={{ color: cfg.color }}>
+            {cfg.icon}
+            <span className="font-bold text-sm">{cfg.label}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="text-xs font-medium" style={{ color: cfg.color }}>
+              置信度 {analysis.confidence}%
+            </div>
+            {/* 置信度进度条 */}
+            <div className="w-16 h-1.5 rounded-full overflow-hidden"
+              style={{ background: "oklch(0.88 0.04 70)" }}>
+              <div className="h-full rounded-full transition-all"
+                style={{
+                  width: `${analysis.confidence}%`,
+                  background: cfg.color,
+                }} />
+            </div>
+          </div>
+        </div>
+
+        {/* 一句话结论 */}
+        <p className="text-sm font-medium leading-snug" style={{ color: cfg.color }}>
+          {analysis.summary}
+        </p>
+
+        {/* 详细推理 */}
+        {analysis.reasoning && (
+          <div className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
+            {analysis.reasoning}
+          </div>
+        )}
+
+        {/* 市场背景 */}
+        {analysis.marketContext && (
+          <div className="rounded-lg px-3 py-2 text-xs text-muted-foreground"
+            style={{ background: "oklch(1 0 0 / 0.5)" }}>
+            <span className="font-medium text-foreground/70">市场背景：</span>
+            {analysis.marketContext}
+          </div>
+        )}
+
+        {/* 风险提示 */}
+        {analysis.riskWarning && (
+          <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
+            style={{ background: "oklch(0.97 0.03 30)", color: "oklch(0.50 0.12 30)" }}>
+            <ShieldAlert className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>{analysis.riskWarning}</span>
+          </div>
+        )}
+
+        {/* 分析时间 */}
+        <div className="text-xs text-muted-foreground/60 text-right">
+          分析于 {new Date(analysis.analyzedAt).toLocaleString("zh-CN", {
+            month: "short", day: "numeric",
+            hour: "2-digit", minute: "2-digit"
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -277,6 +466,9 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
           )}
         </div>
 
+        {/* AI 分析结论区 */}
+        <AiAnalysisSection signalId={signal.id} isLoggedIn={isLoggedIn} />
+
         {/* 备注区 */}
         <NotesSection signalId={signal.id} isLoggedIn={isLoggedIn} />
       </div>
@@ -336,7 +528,7 @@ function FetchButton({ onFetched }: { onFetched: () => void }) {
                 ))}
               </div>
               <p className="text-muted-foreground text-xs text-center">
-                {result.inserted > 0 ? `成功导入 ${result.inserted} 条新信号` : "未发现新信号（已是最新）"}
+                {result.inserted > 0 ? `成功导入 ${result.inserted} 条新信号，AI 分析已自动触发` : "未发现新信号（已是最新）"}
               </p>
             </div>
           )}
@@ -344,6 +536,84 @@ function FetchButton({ onFetched }: { onFetched: () => void }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// ─── API 配置同步提示 ─────────────────────────────────────────────────────────
+// 检测 localStorage 中是否有 API 配置，若有则提示同步到服务端
+function ApiSyncBanner({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const [dismissed, setDismissed] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const { data: serverConfig } = trpc.userApiConfig.get.useQuery(undefined, {
+    enabled: isLoggedIn,
+  });
+
+  const saveMutation = trpc.userApiConfig.save.useMutation({
+    onSuccess: () => {
+      toast.success("API 配置已同步到服务端，AI 将自动分析新信号");
+      setSyncing(false);
+      setDismissed(true);
+    },
+    onError: (e) => {
+      toast.error(`同步失败：${e.message}`);
+      setSyncing(false);
+    },
+  });
+
+  if (!isLoggedIn || dismissed || serverConfig) return null;
+
+  // 读取 localStorage 中的配置
+  const localConfig = (() => {
+    try {
+      const raw = localStorage.getItem("agent_api_config");
+      if (!raw) return null;
+      return JSON.parse(raw) as { apiUrl?: string; apiKey?: string; model?: string; temperature?: number; maxTokens?: number };
+    } catch { return null; }
+  })();
+
+  if (!localConfig?.apiUrl || !localConfig?.apiKey) return null;
+
+  const handleSync = () => {
+    if (!localConfig.apiUrl || !localConfig.apiKey || !localConfig.model) return;
+    setSyncing(true);
+    saveMutation.mutate({
+      apiUrl: localConfig.apiUrl,
+      apiKey: localConfig.apiKey,
+      model: localConfig.model || "gpt-4o",
+      temperature: localConfig.temperature ?? 0.7,
+      maxTokens: localConfig.maxTokens ?? 4096,
+    });
+  };
+
+  return (
+    <div className="mb-6 rounded-xl p-4 flex items-center justify-between gap-4"
+      style={{ background: "oklch(0.97 0.04 270)", border: "1px solid oklch(0.85 0.08 270)" }}>
+      <div className="flex items-start gap-3">
+        <CloudUpload className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "oklch(0.50 0.14 270)" }} />
+        <div>
+          <p className="text-sm font-medium" style={{ color: "oklch(0.35 0.10 270)" }}>
+            检测到本地 API 配置
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: "oklch(0.50 0.08 270)" }}>
+            将您在 AI 分析师中配置的 API Key 同步到服务端，即可启用交易信号自动分析功能
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Button size="sm" variant="outline" className="h-7 text-xs"
+          onClick={() => setDismissed(true)}>
+          忽略
+        </Button>
+        <Button size="sm" className="h-7 text-xs gap-1"
+          onClick={handleSync}
+          disabled={syncing}
+          style={{ background: "oklch(0.50 0.14 270)", color: "white" }}>
+          {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CloudUpload className="w-3 h-3" />}
+          立即同步
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -414,10 +684,13 @@ export default function Signals() {
             交易信号管理
           </h1>
           <p className="text-sm text-muted-foreground">
-            来自 163 邮箱的交易终端信号，每 5 分钟自动同步一次
+            来自 163 邮箱的交易终端信号，每 5 分钟自动同步并由 AI 分析
             {data && <span className="ml-2 font-medium" style={{ color: "oklch(0.60 0.13 60)" }}>共 {data.total} 条</span>}
           </p>
         </div>
+
+        {/* API 同步提示横幅 */}
+        <ApiSyncBanner isLoggedIn={isAuthenticated} />
 
         {/* 状态筛选栏 */}
         <div className="flex flex-wrap gap-2 mb-6">
@@ -435,11 +708,6 @@ export default function Signals() {
               }}
             >
               {f.label}
-              {f.value !== "all" && data && (
-                <span className="ml-1 opacity-70 text-xs">
-                  {/* 只在全量数据中显示，此处省略 */}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -509,7 +777,7 @@ export default function Signals() {
       {/* 页脚 */}
       <footer className="border-t border-border py-4">
         <div className="container text-center text-xs text-muted-foreground">
-          交易信号来自 163 邮箱自动同步 · 每 5 分钟更新一次 · 仅供参考，不构成投资建议
+          交易信号来自 163 邮箱自动同步 · 每 5 分钟更新 · AI 自动分析 · 仅供参考，不构成投资建议
         </div>
       </footer>
     </div>

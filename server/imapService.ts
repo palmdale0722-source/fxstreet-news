@@ -11,6 +11,7 @@ import { simpleParser } from "mailparser";
 import { getDb } from "./db";
 import { signals } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { analyzeSignal } from "./signalAnalyzer";
 
 const IMAP_HOST = "imap.163.com";
 const IMAP_PORT = 993;
@@ -140,7 +141,7 @@ export async function fetchSignalEmails(
 
                 if (existing.length > 0) return;
 
-                await db.insert(signals).values({
+                const insertResult = await db.insert(signals).values({
                   messageId,
                   subject,
                   body: body.trim(),
@@ -149,6 +150,22 @@ export async function fetchSignalEmails(
                   status: "pending",
                 });
                 result.inserted++;
+
+                // 异步触发 AI 分析（不阻塞邮件拉取流程）
+                const newSignalId = (insertResult[0] as { insertId: number }).insertId;
+                const newSignal = {
+                  id: newSignalId,
+                  messageId,
+                  subject,
+                  body: body.trim(),
+                  fromEmail,
+                  receivedAt,
+                  status: "pending" as const,
+                  createdAt: new Date(),
+                };
+                analyzeSignal(newSignal).catch(err =>
+                  console.error(`[IMAP] AI analysis failed for signal #${newSignalId}:`, err)
+                );
               } catch (e) {
                 result.errors++;
                 console.error("[IMAP] Parse/insert error:", e);

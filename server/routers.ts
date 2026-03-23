@@ -39,6 +39,9 @@ import {
   getTradeJournalForAgent,
   getIndicatorSignalsForAgent,
   getIndicatorConfigs,
+  getUserApiConfig,
+  upsertUserApiConfig,
+  getSignalAnalysis,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -677,6 +680,84 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
         return { content };
       }),
   }),
+  // ─── 用户 AI API 配置路由 ─────────────────────────────────────────────────
+  userApiConfig: router({
+    // 获取当前用户的 API 配置（不返回 apiKey 明文，只返回是否已配置）
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const config = await getUserApiConfig(ctx.user.id);
+      if (!config) return null;
+      return {
+        apiUrl: config.apiUrl,
+        apiKeyMasked: config.apiKey.slice(0, 6) + "****" + config.apiKey.slice(-4),
+        model: config.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        updatedAt: config.updatedAt,
+      };
+    }),
+
+    // 保存 API 配置（同时同步到 localStorage 的配置会被服务端持久化）
+    save: protectedProcedure
+      .input(z.object({
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+        temperature: z.number().min(0).max(2).optional().default(0.7),
+        maxTokens: z.number().min(256).max(32768).optional().default(4096),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await upsertUserApiConfig({
+          userId: ctx.user.id,
+          apiUrl: input.apiUrl,
+          apiKey: input.apiKey,
+          model: input.model,
+          temperature: String(input.temperature),
+          maxTokens: input.maxTokens,
+        });
+        return { success: true };
+      }),
+
+    // 删除 API 配置
+    delete: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getDb } = await import("./db");
+      const { userApiConfigs } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) await db.delete(userApiConfigs).where(eq(userApiConfigs.userId, ctx.user.id));
+      return { success: true };
+    }),
+  }),
+
+  // ─── 信号 AI 分析路由 ──────────────────────────────────────────────────────
+  signalAnalysis: router({
+    // 获取某条信号的 AI 分析结果
+    get: publicProcedure
+      .input(z.object({ signalId: z.number() }))
+      .query(async ({ input }) => {
+        return getSignalAnalysis(input.signalId);
+      }),
+
+    // 手动触发对某条信号的 AI 分析（需要登录）
+    analyze: protectedProcedure
+      .input(z.object({ signalId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { getDb } = await import("./db");
+        const { signals } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const { analyzeSignal } = await import("./signalAnalyzer");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "数据库不可用" });
+        const rows = await db.select().from(signals).where(eq(signals.id, input.signalId)).limit(1);
+        if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "信号不存在" });
+        // 删除旧分析（允许重新分析）
+        const { signalAnalyses } = await import("../drizzle/schema");
+        await db.delete(signalAnalyses).where(eq(signalAnalyses.signalId, input.signalId));
+        // 异步触发分析
+        analyzeSignal(rows[0]).catch(console.error);
+        return { success: true, message: "AI 分析已触发，请稍后刷新查看结果" };
+      }),
+  }),
+
   // ─── 管理路由（手动触发更新）──────────────────────────────────────────────
   admin: router({
     triggerUpdate: protectedProcedure.mutation(async ({ ctx }) => {

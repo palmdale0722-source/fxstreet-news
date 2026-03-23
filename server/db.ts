@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -482,4 +482,82 @@ export async function deleteTradingSystemEntry(id: number, userId: number): Prom
   const db = await getDb();
   if (!db) return;
   await db.delete(tradingSystem).where(and(eq(tradingSystem.id, id), eq(tradingSystem.userId, userId)));
+}
+
+// ─── 用户 AI API 配置 ────────────────────────────────────────────────────────
+
+export async function getUserApiConfig(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(userApiConfigs).where(eq(userApiConfigs.userId, userId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertUserApiConfig(config: InsertUserApiConfig): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(userApiConfigs).values(config).onDuplicateKeyUpdate({
+    set: {
+      apiUrl: config.apiUrl,
+      apiKey: config.apiKey,
+      model: config.model,
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+// 获取所有已配置 API 的用户（用于后台批量分析信号）
+export async function getAllUsersWithApiConfig() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(userApiConfigs);
+}
+
+// ─── 信号 AI 分析结果 ────────────────────────────────────────────────────────
+
+export async function getSignalAnalysis(signalId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(signalAnalyses).where(eq(signalAnalyses.signalId, signalId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function saveSignalAnalysis(analysis: InsertSignalAnalysis): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(signalAnalyses).values(analysis).onDuplicateKeyUpdate({
+    set: {
+      decision: analysis.decision,
+      confidence: analysis.confidence,
+      summary: analysis.summary,
+      reasoning: analysis.reasoning,
+      marketContext: analysis.marketContext,
+      riskWarning: analysis.riskWarning,
+      analyzedAt: new Date(),
+      notified: false,
+    },
+  });
+}
+
+export async function markSignalAnalysisNotified(signalId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(signalAnalyses).set({ notified: true }).where(eq(signalAnalyses.signalId, signalId));
+}
+
+// 获取所有待通知的分析结果（decision 为 execute 或 watch，且尚未通知）
+export async function getPendingNotificationAnalyses() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    analysis: signalAnalyses,
+    signal: signals,
+  })
+    .from(signalAnalyses)
+    .innerJoin(signals, eq(signalAnalyses.signalId, signals.id))
+    .where(and(eq(signalAnalyses.notified, false)))
+    .orderBy(desc(signalAnalyses.analyzedAt))
+    .limit(20);
 }
