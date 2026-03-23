@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -560,4 +560,66 @@ export async function getPendingNotificationAnalyses() {
     .where(and(eq(signalAnalyses.notified, false)))
     .orderBy(desc(signalAnalyses.analyzedAt))
     .limit(20);
+}
+
+// ─── IMAP 邮箱配置 ─────────────────────────────────────────────────────────────────────
+
+/** 获取当前激活的 IMAP 配置，如果数据库无配置则降级到环境变量 */
+export async function getActiveImapConfig(): Promise<{ email: string; password: string; host: string; port: number; tls: boolean } | null> {
+  const db = await getDb();
+  if (db) {
+    const rows = await db.select().from(imapConfig)
+      .where(eq(imapConfig.active, true))
+      .orderBy(desc(imapConfig.updatedAt))
+      .limit(1);
+    if (rows.length > 0) {
+      const r = rows[0];
+      return { email: r.email, password: r.password, host: r.host, port: r.port, tls: r.tls };
+    }
+  }
+  // 降级到环境变量
+  const email = process.env.IMAP_EMAIL;
+  const password = process.env.IMAP_PASSWORD;
+  if (email && password) {
+    return { email, password, host: "imap.163.com", port: 993, tls: true };
+  }
+  return null;
+}
+
+/** 获取当前配置（密码脱敏，供前端展示） */
+export async function getImapConfigForDisplay() {
+  const db = await getDb();
+  if (db) {
+    const rows = await db.select().from(imapConfig)
+      .where(eq(imapConfig.active, true))
+      .orderBy(desc(imapConfig.updatedAt))
+      .limit(1);
+    if (rows.length > 0) {
+      const r = rows[0];
+      return {
+        source: "db" as const,
+        email: r.email,
+        host: r.host,
+        port: r.port,
+        tls: r.tls,
+        updatedAt: r.updatedAt,
+      };
+    }
+  }
+  // 降级到环境变量
+  const email = process.env.IMAP_EMAIL;
+  if (email) {
+    return { source: "env" as const, email, host: "imap.163.com", port: 993, tls: true, updatedAt: null };
+  }
+  return null;
+}
+
+/** 保存新的 IMAP 配置（先将旧配置设为非激活，再插入新记录） */
+export async function saveImapConfig(config: { email: string; password: string; host: string; port: number; tls: boolean }): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // 将旧配置设为非激活
+  await db.update(imapConfig).set({ active: false }).where(eq(imapConfig.active, true));
+  // 插入新配置
+  await db.insert(imapConfig).values({ ...config, active: true });
 }

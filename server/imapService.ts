@@ -22,24 +22,36 @@ export interface FetchResult {
   errors: number;
 }
 
+export interface ImapConnectionOptions {
+  host?: string;
+  port?: number;
+  tls?: boolean;
+}
+
 /**
- * 连接 IMAP 并拉取收件箱中的最新邮件
- * @param email 163 邮箱地址
+ * 连接 IMAP 并拉取收件符1中的最新邮件
+ * @param email 邮箱地址
  * @param password 邮箱密码或授权码
  * @param maxMessages 最多拉取多少封（默认50）
+ * @param options 可选的连接参数（host/port/tls）
  */
 export async function fetchSignalEmails(
   email: string,
   password: string,
-  maxMessages = 50
+  maxMessages = 50,
+  options?: ImapConnectionOptions
 ): Promise<FetchResult> {
+  const host = options?.host ?? IMAP_HOST;
+  const port = options?.port ?? IMAP_PORT;
+  const tls = options?.tls ?? true;
+
   return new Promise((resolve, reject) => {
     const imap = new Imap({
       user: email,
       password,
-      host: IMAP_HOST,
-      port: IMAP_PORT,
-      tls: true,
+      host,
+      port,
+      tls,
       tlsOptions: { rejectUnauthorized: false },
       connTimeout: 15000,
       authTimeout: 10000,

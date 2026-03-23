@@ -105,6 +105,16 @@ vi.mock("./db", () => ({
   updateAgentSessionTitle: vi.fn().mockResolvedValue(undefined),
   getNewsContextForAgent: vi.fn().mockResolvedValue([]),
   getLatestInsightAndOutlooks: vi.fn().mockResolvedValue({ insight: null, outlooks: [] }),
+  getActiveImapConfig: vi.fn().mockResolvedValue({ email: "test@163.com", password: "testpass", host: "imap.163.com", port: 993, tls: true }),
+  getImapConfigForDisplay: vi.fn().mockResolvedValue({ source: "db", email: "test@163.com", host: "imap.163.com", port: 993, tls: true, updatedAt: new Date() }),
+  saveImapConfig: vi.fn().mockResolvedValue(undefined),
+  getUserApiConfig: vi.fn().mockResolvedValue(null),
+  upsertUserApiConfig: vi.fn().mockResolvedValue(undefined),
+  getAllUsersWithApiConfig: vi.fn().mockResolvedValue([]),
+  getSignalAnalysis: vi.fn().mockResolvedValue(null),
+  saveSignalAnalysis: vi.fn().mockResolvedValue(undefined),
+  markSignalAnalysisNotified: vi.fn().mockResolvedValue(undefined),
+  getPendingNotificationAnalyses: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock imapService

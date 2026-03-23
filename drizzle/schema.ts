@@ -227,6 +227,23 @@ export const mt4IndicatorConfigs = mysqlTable("mt4_indicator_configs", {
 export type Mt4IndicatorConfig = typeof mt4IndicatorConfigs.$inferSelect;
 export type InsertMt4IndicatorConfig = typeof mt4IndicatorConfigs.$inferInsert;
 
+// ─── IMAP 邮箱配置表 ─────────────────────────────────────────────────────────
+// 存储管理员在前端配置的 IMAP 邮箱账号和密码，优先级高于环境变量
+export const imapConfig = mysqlTable("imap_config", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  password: text("password").notNull(),
+  host: varchar("host", { length: 255 }).notNull().default("imap.163.com"),
+  port: int("port").notNull().default(993),
+  tls: boolean("tls").notNull().default(true),
+  active: boolean("active").notNull().default(true),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ImapConfig = typeof imapConfig.$inferSelect;
+export type InsertImapConfig = typeof imapConfig.$inferInsert;
+
 // ─── 历史交易记录表 ──────────────────────────────────────────────────────────
 // 用户手动输入的历史交易记录，用于 AI 分析参考
 export const tradeJournal = mysqlTable("trade_journal", {

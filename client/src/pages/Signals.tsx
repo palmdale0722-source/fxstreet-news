@@ -192,7 +192,7 @@ function AiAnalysisSection({ signalId, isLoggedIn }: { signalId: number; isLogge
           )}
         </div>
         <p className="text-xs text-muted-foreground mt-2 italic">
-          {isLoggedIn ? "尚未分析，点击"立即分析"触发 AI 决策" : "登录后可触发 AI 分析"}
+          {isLoggedIn ? "尚未分析，点击\u300c立即分析\u300d触发 AI 决策" : "登录后可触发 AI 分析"}
         </p>
       </div>
     );

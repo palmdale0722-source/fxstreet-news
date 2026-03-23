@@ -42,10 +42,14 @@ import {
   getUserApiConfig,
   upsertUserApiConfig,
   getSignalAnalysis,
+  getImapConfigForDisplay,
+  saveImapConfig,
+  getActiveImapConfig,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
+import { restartImapJobs } from "./cronJobs";
 import { invokeLLM } from "./_core/llm";
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
@@ -164,14 +168,70 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可手动拉取邮件" });
       }
-      const email = process.env.IMAP_EMAIL;
-      const password = process.env.IMAP_PASSWORD;
-      if (!email || !password) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IMAP 邮箱未配置，请先设置 IMAP_EMAIL 和 IMAP_PASSWORD" });
+      const config = await getActiveImapConfig();
+      if (!config) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IMAP 邮箱未配置，请先在邮箱设置中配置账号和密码" });
       }
-      const result = await fetchSignalEmails(email, password);
+      const result = await fetchSignalEmails(config.email, config.password, 50, {
+        host: config.host,
+        port: config.port,
+        tls: config.tls,
+      });
       return { ...result, fetchedAt: new Date() };
     }),
+
+    // 获取当前 IMAP 配置（密码脱敏，仅管理员）
+    getImapConfig: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可查看 IMAP 配置" });
+      }
+      return getImapConfigForDisplay();
+    }),
+
+    // 保存 IMAP 配置（仅管理员）
+    saveImapConfig: protectedProcedure
+      .input(z.object({
+        email: z.string().email("请输入有效的邮箱地址"),
+        password: z.string().min(1, "密码不能为空"),
+        host: z.string().min(1, "服务器地址不能为空").default("imap.163.com"),
+        port: z.number().int().min(1).max(65535).default(993),
+        tls: z.boolean().default(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可修改 IMAP 配置" });
+        }
+        await saveImapConfig(input);
+        // 重新启动定时任务以使用新配置
+        restartImapJobs();
+        return { success: true };
+      }),
+
+    // 测试 IMAP 连接（不入库，仅验证连通性）
+    testImapConnection: protectedProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+        host: z.string().min(1).default("imap.163.com"),
+        port: z.number().int().min(1).max(65535).default(993),
+        tls: z.boolean().default(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可测试连接" });
+        }
+        // 仅拉取最新 1 封测试连通性
+        try {
+          await fetchSignalEmails(input.email, input.password, 1, {
+            host: input.host,
+            port: input.port,
+            tls: input.tls,
+          });
+          return { success: true, message: "连接成功！邮箱认证通过" };
+        } catch (e: any) {
+          return { success: false, message: e.message || "连接失败" };
+        }
+      }),
   }),
 
   //  // ─── AI Agent 路由 ─────────────────────────────────────────────────────────────────

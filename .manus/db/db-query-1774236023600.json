@@ -1,0 +1,9 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS imap_config (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  email VARCHAR(320) NOT NULL,\n  password TEXT NOT NULL,\n  host VARCHAR(255) NOT NULL DEFAULT 'imap.163.com',\n  port INT NOT NULL DEFAULT 993,\n  tls BOOLEAN NOT NULL DEFAULT TRUE,\n  active BOOLEAN NOT NULL DEFAULT TRUE,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute \nCREATE TABLE IF NOT EXISTS imap_config (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  email VARCHAR(320) NOT NULL,\n  password TEXT NOT NULL,\n  host VARCHAR(255) NOT NULL DEFAULT 'imap.163.com',\n  port INT NOT NULL DEFAULT 993,\n  tls BOOLEAN NOT NULL DEFAULT TRUE,\n  active BOOLEAN NOT NULL DEFAULT TRUE,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2197
+}

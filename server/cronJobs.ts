@@ -1,5 +1,6 @@
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
+import { getActiveImapConfig } from "./db";
 import type { Express } from "express";
 
 let cronTimer: NodeJS.Timeout | null = null;
@@ -42,13 +43,7 @@ export function stopCronJobs() {
 
 // 启动 IMAP 邮件拉取定时任务
 export function startImapJobs() {
-  const email = process.env.IMAP_EMAIL;
-  const password = process.env.IMAP_PASSWORD;
-  if (!email || !password) {
-    console.log("[IMAP] IMAP_EMAIL or IMAP_PASSWORD not set, skipping IMAP jobs");
-    return;
-  }
-  console.log(`[IMAP] Starting IMAP polling (interval: 5 min) for ${email}`);
+  console.log("[IMAP] Starting IMAP polling (interval: 5 min)");
 
   // 启动后延迟 10s 执行一次
   setTimeout(() => safeRunImap("startup"), 10000);
@@ -56,17 +51,35 @@ export function startImapJobs() {
   imapTimer = setInterval(() => safeRunImap("scheduled"), IMAP_INTERVAL_MS);
 }
 
+/** 重新启动 IMAP 定时任务（保存新配置后调用） */
+export function restartImapJobs() {
+  if (imapTimer) {
+    clearInterval(imapTimer);
+    imapTimer = null;
+  }
+  imapTimer = setInterval(() => safeRunImap("scheduled"), IMAP_INTERVAL_MS);
+  // 立即执行一次
+  safeRunImap("restart");
+}
+
 async function safeRunImap(trigger: string) {
-  const email = process.env.IMAP_EMAIL;
-  const password = process.env.IMAP_PASSWORD;
-  if (!email || !password) return;
   if (isImapRunning) {
     console.log(`[IMAP] Already running, skipping ${trigger}`);
     return;
   }
+  // 优先从数据库读取配置，降级到环境变量
+  const config = await getActiveImapConfig();
+  if (!config) {
+    console.log("[IMAP] No IMAP config found (neither DB nor env), skipping");
+    return;
+  }
   isImapRunning = true;
   try {
-    const result = await fetchSignalEmails(email, password);
+    const result = await fetchSignalEmails(config.email, config.password, 50, {
+      host: config.host,
+      port: config.port,
+      tls: config.tls,
+    });
     if (result.inserted > 0) {
       console.log(`[IMAP] Fetched ${result.fetched}, inserted ${result.inserted} new signals`);
     }
