@@ -12,6 +12,7 @@ import {
   TrendingUp, TrendingDown, ChevronLeft, Loader2, BarChart2, ArrowLeftRight,
   Lightbulb, ShieldAlert, Target, Clock, Wifi, WifiOff,
   Settings, Key, Globe, Cpu, AlertCircle, CheckCircle2, X, BookOpen,
+  MessageCircle, Repeat2, BookMarked, Scale, Brain, Layers,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
@@ -343,6 +344,16 @@ const G8_PAIRS = [
 ];
 
 // ─── 快捷提问模板 ─────────────────────────────────────────────────────────────
+// 自由讨论快捷问题（不依赖货币对）
+const FREE_DISCUSSION_QUESTIONS = [
+  { icon: Brain, label: "交易体系复盘", template: () => "请帮我分析我的交易体系，找出可能存在的逻辑漏洞或改进空间。" },
+  { icon: Repeat2, label: "最近交易复盘", template: () => "请帮我复盘最近的交易，分析哪些决策符合体系，哪些需要改进。" },
+  { icon: BookMarked, label: "市场宏观分析", template: () => "请从宏观角度分析当前外汇市场的主要驱动因素和风险点。" },
+  { icon: Scale, label: "风险管理讨论", template: () => "请评估我的风险管理策略，并给出优化建议。" },
+  { icon: Layers, label: "多周期分析框架", template: () => "请介绍如何构建一套完整的多周期分析框架，并结合我的交易体系给出建议。" },
+  { icon: Lightbulb, label: "市场机会扫描", template: () => "请扫描当前 G8 货币对，哪些货币对有值得关注的交易机会？" },
+];
+
 const QUICK_QUESTIONS = [
   { icon: TrendingUp, label: "趋势方向", template: (pair: string) => `${pair} 当前处于什么趋势？多周期趋势是否一致？` },
   { icon: Target, label: "关键点位", template: (pair: string) => `${pair} 当前关键支撑位和阻力位在哪里？请给出具体价格。` },
@@ -473,6 +484,19 @@ export default function Agent() {
     newSessionMutation.mutate({ pair: selectedPair });
   }, [selectedPair]);
 
+  // 自由讨论：创建不绑定货币对的会话
+  const handleNewFreeDiscussion = useCallback((initialQuestion?: string) => {
+    if (!isApiConfigured) {
+      setShowSettings(true);
+      toast.error("请先配置 AI API 接口");
+      return;
+    }
+    if (initialQuestion) {
+      pendingMessageRef.current = initialQuestion;
+    }
+    newSessionMutation.mutate({ pair: undefined });
+  }, [isApiConfigured]);
+
   const handleSend = useCallback(() => {
     const msg = inputValue.trim();
     if (!msg || !activeSessionId || isSending) return;
@@ -595,24 +619,36 @@ export default function Agent() {
         </div>
 
         {/* 操作按钮 */}
-        <div className="p-3 flex gap-2 flex-shrink-0">
+        <div className="p-3 flex flex-col gap-1.5 flex-shrink-0">
+          <div className="flex gap-2">
+            <Button
+              onClick={handleNewSession}
+              disabled={newSessionMutation.isPending}
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+              size="sm"
+            >
+              {newSessionMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+              标的分析
+            </Button>
+            <Button
+              onClick={() => setShowSettings(true)}
+              variant="outline"
+              size="sm"
+              className={`px-2.5 ${!isApiConfigured ? "border-orange-400 text-orange-600 hover:bg-orange-50" : ""}`}
+              title="API 配置"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </Button>
+          </div>
           <Button
-            onClick={handleNewSession}
+            onClick={() => handleNewFreeDiscussion()}
             disabled={newSessionMutation.isPending}
-            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
-            size="sm"
-          >
-            {newSessionMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-            新建对话
-          </Button>
-          <Button
-            onClick={() => setShowSettings(true)}
             variant="outline"
+            className="w-full gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
             size="sm"
-            className={`px-2.5 ${!isApiConfigured ? "border-orange-400 text-orange-600 hover:bg-orange-50" : ""}`}
-            title="API 配置"
           >
-            <Settings className="w-3.5 h-3.5" />
+            <MessageCircle className="w-3 h-3" />
+            自由讨论
           </Button>
         </div>
 
@@ -647,7 +683,7 @@ export default function Agent() {
             <div className="text-center py-8 text-muted-foreground text-sm px-3">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p>还没有对话</p>
-              <p className="text-xs mt-1">点击"新建对话"开始分析</p>
+              <p className="text-xs mt-1">点击上方按钮开始</p>
             </div>
           ) : (
             <div className="space-y-1 py-2">
@@ -656,7 +692,7 @@ export default function Agent() {
                   key={session.id}
                   className={`group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
                     activeSessionId === session.id
-                      ? "bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100"
+                      ? (session.pair ? "bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100" : "bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100")
                       : "hover:bg-muted"
                   }`}
                   onClick={() => {
@@ -664,12 +700,13 @@ export default function Agent() {
                     if (session.pair) setSelectedPair(session.pair);
                   }}
                 >
-                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                  {session.pair
+                    ? <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                    : <MessageCircle className="w-3.5 h-3.5 flex-shrink-0 text-blue-500" />
+                  }
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{session.title}</p>
-                    {session.pair && (
-                      <p className="text-xs text-muted-foreground">{session.pair}</p>
-                    )}
+                    <p className="text-xs text-muted-foreground">{session.pair || "自由讨论"}</p>
                   </div>
                   <button
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
@@ -741,9 +778,9 @@ export default function Agent() {
               </div>
             </div>
 
-            {/* 快捷提问 */}
+            {/* 标的分析快捷提问 */}
             <div className="w-full max-w-2xl space-y-3">
-              <p className="text-sm font-medium text-center text-muted-foreground">快捷分析</p>
+              <p className="text-sm font-medium text-center text-muted-foreground">标的分析</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {QUICK_QUESTIONS.map(({ icon: Icon, label, template }) => (
                   <button
@@ -770,6 +807,44 @@ export default function Agent() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 自由讨论入口 */}
+            <div className="w-full max-w-2xl space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-border" />
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4 text-blue-500" />
+                  自由讨论
+                </p>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <p className="text-xs text-center text-muted-foreground">不限标的，讨论交易体系、市场行情、交易复盘等任何话题</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {FREE_DISCUSSION_QUESTIONS.map(({ icon: Icon, label, template }) => (
+                  <button
+                    key={label}
+                    onClick={() => handleNewFreeDiscussion(template())}
+                    className="flex items-center gap-2 p-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-card hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                      <Icon className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">自由讨论</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <Button
+                onClick={() => handleNewFreeDiscussion()}
+                variant="outline"
+                className="w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+              >
+                <MessageCircle className="w-4 h-4" />
+                开始自由讨论
+              </Button>
             </div>
           </div>
         ) : (

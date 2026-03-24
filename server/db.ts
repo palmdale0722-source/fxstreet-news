@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -729,4 +729,38 @@ export async function getLatestTfSignals(timeframe = "M15", limit = 28) {
     seen.add(r.symbol);
     return true;
   });
+}
+
+// ─── 历史对话记录 CRUD ─────────────────────────────────────────────────────────
+
+export async function getTradingConversations(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tradingConversations)
+    .where(eq(tradingConversations.userId, userId))
+    .orderBy(desc(tradingConversations.updatedAt))
+    .limit(200);
+}
+
+export async function createTradingConversation(data: InsertTradingConversation) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const [result] = await db.insert(tradingConversations).values(data).$returningId();
+  const rows = await db.select().from(tradingConversations).where(eq(tradingConversations.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function updateTradingConversation(id: number, userId: number, data: Partial<InsertTradingConversation>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tradingConversations)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(tradingConversations.id, id), eq(tradingConversations.userId, userId)));
+}
+
+export async function deleteTradingConversation(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(tradingConversations)
+    .where(and(eq(tradingConversations.id, id), eq(tradingConversations.userId, userId)));
 }

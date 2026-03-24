@@ -25,7 +25,7 @@ import {
   BookOpen, TrendingUp, TrendingDown, Settings2, Plus, Pencil, Trash2,
   ChevronLeft, CheckCircle, XCircle, BarChart2, BrainCircuit, ArrowUpRight,
   ArrowDownRight, Clock, Tag, DollarSign, Activity, Lightbulb, LogIn,
-  Upload, FileText, AlertCircle, CheckCircle2
+  Upload, FileText, AlertCircle, CheckCircle2, MessageCircle, Search, X,
 } from "lucide-react";
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
@@ -1066,12 +1066,257 @@ function IndicatorConfigTab() {
   );
 }
 
+// ─── 历史对话标签页 ──────────────────────────────────────────────────────────
+
+type ConvItem = {
+  id: number;
+  title: string;
+  content: string;
+  tags: string | null;
+  source: string | null;
+  conversationDate: Date | null;
+  createdAt: Date;
+};
+
+function TradingConversationsTab() {
+  const utils = trpc.useUtils();
+  const { data: items, isLoading } = trpc.tradingConversation.list.useQuery();
+  const [search, setSearch] = useState("");
+  const [editItem, setEditItem] = useState<Partial<ConvItem> & { id?: number } | null>(null);
+
+  const createMutation = trpc.tradingConversation.create.useMutation({
+    onSuccess: () => { utils.tradingConversation.list.invalidate(); setEditItem(null); toast.success("已保存"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const updateMutation = trpc.tradingConversation.update.useMutation({
+    onSuccess: () => { utils.tradingConversation.list.invalidate(); setEditItem(null); toast.success("已更新"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteMutation = trpc.tradingConversation.delete.useMutation({
+    onSuccess: () => { utils.tradingConversation.list.invalidate(); toast.success("已删除"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleSave = () => {
+    if (!editItem) return;
+    if (!editItem.content?.trim()) { toast.error("对话内容不能为空"); return; }
+    const payload = {
+      title: editItem.title?.trim() || "未命名对话",
+      content: editItem.content.trim(),
+      tags: editItem.tags?.trim() || undefined,
+      source: editItem.source?.trim() || undefined,
+      conversationDate: editItem.conversationDate
+        ? (editItem.conversationDate instanceof Date
+            ? editItem.conversationDate.toISOString().slice(0, 10)
+            : String(editItem.conversationDate).slice(0, 10))
+        : undefined,
+    };
+    if (editItem.id) {
+      updateMutation.mutate({ id: editItem.id, ...payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const filtered = (items ?? []).filter(item => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.content.toLowerCase().includes(q) ||
+      (item.tags ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">历史对话记录</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">将你与 AI 的历史讨论记录在这里，AI 分析师可参考这些对话内容</p>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => setEditItem({ title: "", content: "", tags: "", source: "ChatGPT", conversationDate: null })}
+          className="gap-1.5 flex-shrink-0"
+          style={{ background: "oklch(0.55 0.15 220)", color: "white" }}
+        >
+          <Plus className="w-4 h-4" /> 添加对话
+        </Button>
+      </div>
+
+      {/* 搜索框 */}
+      {(items ?? []).length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            className="w-full pl-9 pr-9 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="搜索标题、内容或标签..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="absolute right-3 top-1/2 -translate-y-1/2" onClick={() => setSearch("")}>
+              <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 rounded-2xl border border-dashed border-border">
+          <MessageCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+          <p className="text-muted-foreground text-sm">
+            {search ? "没有匹配的对话记录" : "还没有历史对话记录"}
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            {search ? "换个关键词试试" : "点击「添加对话」将你与 AI 的历史讨论记录在这里"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(item => (
+            <div key={item.id}
+              className="rounded-xl border border-border/60 p-4 hover:border-border transition-colors"
+              style={{ background: "oklch(0.98 0.005 220 / 0.5)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-medium text-sm text-foreground">{item.title}</span>
+                    {item.source && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">{item.source}</Badge>
+                    )}
+                    {item.conversationDate && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(item.conversationDate).toLocaleDateString("zh-CN")}
+                      </span>
+                    )}
+                  </div>
+                  {item.tags && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {item.tags.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
+                        <span key={tag} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs"
+                          style={{ background: "oklch(0.90 0.05 220)", color: "oklch(0.35 0.10 220)" }}>
+                          <Tag className="w-2.5 h-2.5" />{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4 whitespace-pre-wrap">{item.content}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0"
+                    onClick={() => setEditItem({
+                      id: item.id,
+                      title: item.title,
+                      content: item.content,
+                      tags: item.tags ?? "",
+                      source: item.source ?? "",
+                      conversationDate: item.conversationDate,
+                    })}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    onClick={() => { if (confirm("确认删除此对话记录？")) deleteMutation.mutate({ id: item.id }); }}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 新增/编辑弹窗 */}
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) setEditItem(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editItem?.id ? "编辑对话记录" : "添加历史对话"}</DialogTitle>
+          </DialogHeader>
+          {editItem && (
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">标题</label>
+                <input
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="例如：EURUSD 趋势判断讨论 2024-03"
+                  value={editItem.title ?? ""}
+                  onChange={e => setEditItem({ ...editItem, title: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">来源平台</label>
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="如：ChatGPT、Claude、本站 AI"
+                    value={editItem.source ?? ""}
+                    onChange={e => setEditItem({ ...editItem, source: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">对话日期</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={editItem.conversationDate
+                      ? (editItem.conversationDate instanceof Date
+                          ? editItem.conversationDate.toISOString().slice(0, 10)
+                          : String(editItem.conversationDate).slice(0, 10))
+                      : ""}
+                    onChange={e => setEditItem({ ...editItem, conversationDate: e.target.value ? new Date(e.target.value) : null })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">标签（逗号分隔）</label>
+                <input
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="如：EURUSD, 趋势分析, 日线"
+                  value={editItem.tags ?? ""}
+                  onChange={e => setEditItem({ ...editItem, tags: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">对话内容</label>
+                <textarea
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  rows={10}
+                  placeholder="将你与 AI 的对话内容粘贴到这里，可以是完整对话记录或关键结论摘要..."
+                  value={editItem.content ?? ""}
+                  onChange={e => setEditItem({ ...editItem, content: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">支持粘贴完整对话记录，AI 分析师将参考这些内容提供个性化分析</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>取消</Button>
+            <Button
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              style={{ background: "oklch(0.55 0.15 220)", color: "white" }}
+            >
+              {createMutation.isPending || updateMutation.isPending ? "保存中..." : "保存"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── 主页面 ───────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "system", label: "交易体系", icon: BookOpen },
   { id: "journal", label: "历史交易", icon: Activity },
   { id: "indicators", label: "MT4 指标配置", icon: Settings2 },
+  { id: "conversations", label: "历史对话", icon: MessageCircle },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -1169,6 +1414,7 @@ export default function MySystem() {
           {activeTab === "system" && <TradingSystemTab />}
           {activeTab === "journal" && <TradeJournalTab />}
           {activeTab === "indicators" && <IndicatorConfigTab />}
+          {activeTab === "conversations" && <TradingConversationsTab />}
         </div>
       </div>
     </div>

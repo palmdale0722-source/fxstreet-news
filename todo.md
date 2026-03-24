@@ -139,3 +139,16 @@
 
 ## Bug 修复 - AI 自动分析未触发
 - [x] Agent.tsx API 配置保存只写 localStorage，未同步到数据库，导致 signalAnalyzer 无法获取配置
+
+## AI 分析师自由讨论模式
+- [x] Agent 页面新增「自由讨论」模式，不绑定具体货币对标的
+- [x] 自由讨论模式下 system prompt 聚焦交易体系/市场行情/复盘，不强调特定标的
+- [x] 会话列表区分「标的分析」和「自由讨论」两种类型
+- [x] 后端 agent.newSession 支持 pair=undefined 创建自由讨论会话
+
+## 交易体系 - 历史对话板块
+- [x] TradingSystem 页面新增「历史对话」 Tab
+- [x] 支持手动输入/粘贴历史对话内容（标题 + 正文）
+- [x] 支持查看、编辑、删除历史对话记录
+- [x] 数据库新增 trading_conversations 表
+- [ ] AI 分析师上下文注入历史对话摘要（待后续完善）

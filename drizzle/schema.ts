@@ -6,6 +6,7 @@ import {
   timestamp,
   varchar,
   boolean,
+  date,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -358,6 +359,22 @@ export const signalAnalyses = mysqlTable("signal_analyses", {
 
 export type SignalAnalysis = typeof signalAnalyses.$inferSelect;
 export type InsertSignalAnalysis = typeof signalAnalyses.$inferInsert;
+
+// ─── 历史对话记录表 ──────────────────────────────────────────────────────────
+// 用户手动录入的与 AI 的历史对话，存储在「交易体系」→「历史对话」板块
+export const tradingConversations = mysqlTable("trading_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull().default("未命名对话"),
+  content: text("content").notNull(),
+  tags: varchar("tags", { length: 500 }),
+  conversationDate: date("conversationDate"),
+  source: varchar("source", { length: 100 }),  // 如 ChatGPT、Claude、DeepSeek 等
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TradingConversation = typeof tradingConversations.$inferSelect;
+export type InsertTradingConversation = typeof tradingConversations.$inferInsert;
 
 // ─── TrendWave 多周期数值表 ──────────────────────────────────────────────────
 // 存储 TrendWave Enhanced 指标的 Bull/Bear/Threshold 时间序列

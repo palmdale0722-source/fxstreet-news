@@ -45,6 +45,10 @@ import {
   getImapConfigForDisplay,
   saveImapConfig,
   getActiveImapConfig,
+  getTradingConversations,
+  createTradingConversation,
+  updateTradingConversation,
+  deleteTradingConversation,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -834,6 +838,60 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       };
     }),
   }),
-});
 
+  // ─── 历史对话记录路由 ──────────────────────────────────────────────────────────
+  tradingConversation: router({
+    // 获取当前用户的所有历史对话
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return getTradingConversations(ctx.user.id);
+    }),
+
+    // 新建历史对话
+    create: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255).default("未命名对话"),
+        content: z.string().min(1),
+        tags: z.string().max(500).optional(),
+        conversationDate: z.string().optional(),  // YYYY-MM-DD
+        source: z.string().max(100).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return createTradingConversation({
+          userId: ctx.user.id,
+          title: input.title,
+          content: input.content,
+          tags: input.tags,
+          conversationDate: input.conversationDate ? new Date(input.conversationDate) : undefined,
+          source: input.source,
+        });
+      }),
+
+    // 更新历史对话
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).max(255).optional(),
+        content: z.string().min(1).optional(),
+        tags: z.string().max(500).optional(),
+        conversationDate: z.string().optional(),
+        source: z.string().max(100).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, conversationDate, ...rest } = input;
+        await updateTradingConversation(id, ctx.user.id, {
+          ...rest,
+          conversationDate: conversationDate ? new Date(conversationDate) : undefined,
+        });
+        return { success: true };
+      }),
+
+    // 删除历史对话
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await deleteTradingConversation(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+});
 export type AppRouter = typeof appRouter;
