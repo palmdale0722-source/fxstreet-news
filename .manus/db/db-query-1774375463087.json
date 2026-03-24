@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `tv_idea_analyses` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tvIdeaId` int NOT NULL UNIQUE,\n  `decision` enum('execute','watch','ignore') NOT NULL,\n  `confidence` int NOT NULL,\n  `summary` varchar(200),\n  `reasoning` text,\n  `marketContext` text,\n  `riskWarning` text,\n  `notified` boolean NOT NULL DEFAULT false,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE IF NOT EXISTS `tv_idea_analyses` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tvIdeaId` int NOT NULL UNIQUE,\n  `decision` enum('execute','watch','ignore') NOT NULL,\n  `confidence` int NOT NULL,\n  `summary` varchar(200),\n  `reasoning` text,\n  `marketContext` text,\n  `riskWarning` text,\n  `notified` boolean NOT NULL DEFAULT false,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1928
+}
