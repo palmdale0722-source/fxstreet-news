@@ -425,3 +425,20 @@ export const notifyConfig = mysqlTable("notify_config", {
 });
 export type NotifyConfig = typeof notifyConfig.$inferSelect;
 export type InsertNotifyConfig = typeof notifyConfig.$inferInsert;
+
+// ─── TradingView 交易想法 AI 分析表 ───────────────────────────────────────
+// 存储 AI 对每条 TradingView 交易想法的分析结果。每条想法只分析一次，通过 tvIdeaId 关联
+export const tvIdeaAnalyses = mysqlTable("tv_idea_analyses", {
+  id: int("id").autoincrement().primaryKey(),
+  tvIdeaId: int("tvIdeaId").notNull().unique(),            // 关联 tv_ideas.id
+  decision: mysqlEnum("decision", ["execute", "watch", "ignore"]).notNull(),
+  confidence: int("confidence").notNull(),                 // 置信度 0-100
+  summary: varchar("summary", { length: 200 }),            // 一句话结论
+  reasoning: text("reasoning"),                           // 详细分析推理
+  marketContext: text("marketContext"),                    // 当前市场背景
+  riskWarning: text("riskWarning"),                       // 风险提示
+  notified: boolean("notified").default(false).notNull(), // 是否已推送通知
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type TvIdeaAnalysis = typeof tvIdeaAnalyses.$inferSelect;
+export type InsertTvIdeaAnalysis = typeof tvIdeaAnalyses.$inferInsert;

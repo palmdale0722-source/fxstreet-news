@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -787,4 +787,60 @@ export async function saveNotifyConfig(config: Omit<InsertNotifyConfig, "id" | "
   } else {
     await db.insert(notifyConfig).values({ ...config });
   }
+}
+
+// ─── TradingView 交易想法 AI 分析 ──────────────────────────────────────────────
+
+/** 获取指定交易想法的 AI 分析结果 */
+export async function getTvIdeaAnalysis(tvIdeaId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(tvIdeaAnalyses).where(eq(tvIdeaAnalyses.tvIdeaId, tvIdeaId)).limit(1);
+  return rows[0] ?? null;
+}
+
+/** 保存交易想法分析结果 */
+export async function saveTvIdeaAnalysis(analysis: InsertTvIdeaAnalysis): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(tvIdeaAnalyses).values(analysis).onDuplicateKeyUpdate({
+    set: {
+      decision: analysis.decision,
+      confidence: analysis.confidence,
+      summary: analysis.summary,
+      reasoning: analysis.reasoning,
+      marketContext: analysis.marketContext,
+      riskWarning: analysis.riskWarning,
+      notified: false,
+    },
+  });
+}
+
+/** 标记交易想法分析已推送通知 */
+export async function markTvIdeaAnalysisNotified(tvIdeaId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(tvIdeaAnalyses).set({ notified: true }).where(eq(tvIdeaAnalyses.tvIdeaId, tvIdeaId));
+}
+
+/**
+ * 获取最近 N 小时内新增的、尚未分析的交易想法
+ * 用于每小时定时任务批量分析
+ */
+export async function getUnanalyzedTvIdeas(sinceHours = 2, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+  // 查询最近 sinceHours 小时内新增的想法
+  const recentIdeas = await db.select().from(tvIdeas)
+    .where(sql`${tvIdeas.createdAt} >= ${since}`)
+    .orderBy(desc(tvIdeas.publishedAt))
+    .limit(limit * 2);
+  if (recentIdeas.length === 0) return [];
+  // 过滤掉已分析的
+  const analyzed = await db.select({ tvIdeaId: tvIdeaAnalyses.tvIdeaId })
+    .from(tvIdeaAnalyses)
+    .where(sql`${tvIdeaAnalyses.tvIdeaId} IN (${sql.join(recentIdeas.map(i => sql`${i.id}`), sql`, `)})`);
+  const analyzedIds = new Set(analyzed.map(a => a.tvIdeaId));
+  return recentIdeas.filter(i => !analyzedIds.has(i.id)).slice(0, limit);
 }

@@ -1,6 +1,7 @@
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
 import { getActiveImapConfig } from "./db";
+import { analyzeNewTvIdeas } from "./tvIdeaAnalyzer";
 import type { Express } from "express";
 
 let cronTimer: NodeJS.Timeout | null = null;
@@ -100,6 +101,18 @@ async function safeRunUpdate(trigger: string) {
   try {
     const result = await runFullUpdate();
     console.log(`[Cron] Update complete:`, result);
+
+    // 每次抓取完成后，延迟 5 秒对新增的 TradingView 交易想法进行 AI 分析
+    setTimeout(async () => {
+      try {
+        const analyzeResult = await analyzeNewTvIdeas(2);
+        if (analyzeResult.analyzed > 0) {
+          console.log(`[Cron] TV Idea analysis: analyzed=${analyzeResult.analyzed}, notified=${analyzeResult.notified}`);
+        }
+      } catch (e) {
+        console.error(`[Cron] TV Idea analysis failed:`, e);
+      }
+    }, 5000);
   } catch (e) {
     console.error(`[Cron] Update failed:`, e);
   } finally {

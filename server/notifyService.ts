@@ -375,3 +375,176 @@ export async function pushSignalAnalysis(payload: SignalNotifyPayload): Promise<
 
   return anySuccess;
 }
+
+// ─── TradingView 交易想法推送 ──────────────────────────────────────────────────
+
+export interface TvIdeaNotifyPayload {
+  idea: import("../drizzle/schema").TvIdea;
+  decision: "execute" | "watch";
+  confidence: number;
+  summary: string;
+  reasoning: string;
+  marketContext: string;
+  riskWarning: string;
+}
+
+function buildTvIdeaEmailHtml(payload: TvIdeaNotifyPayload): string {
+  const { idea, decision, confidence, summary, reasoning, marketContext, riskWarning } = payload;
+  const decisionLabel = decision === "execute" ? "🟢 建议执行" : "🟡 建议观察";
+  const decisionColor = decision === "execute" ? "#16a34a" : "#d97706";
+  const decisionBg = decision === "execute" ? "#f0fdf4" : "#fffbeb";
+  const decisionBorder = decision === "execute" ? "#86efac" : "#fde68a";
+  const pairLabel = idea.pair || idea.symbol || "未知品种";
+  const publishedTime = idea.publishedAt.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>TradingView 交易想法 AI 分析</title></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:24px 32px;">
+      <div style="color:#94a3b8;font-size:12px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">TradingView 交易想法 AI 分析</div>
+      <div style="display:inline-block;background:#1d4ed8;color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;margin-bottom:10px;">${pairLabel}</div>
+      <div style="color:#fff;font-size:18px;font-weight:700;line-height:1.4;">${idea.title.slice(0, 80)}</div>
+      <div style="color:#94a3b8;font-size:12px;margin-top:8px;">作者：${idea.author || "匿名"} | 发布：${publishedTime}</div>
+    </div>
+    <div style="padding:24px 32px 0;">
+      <div style="background:${decisionBg};border:1px solid ${decisionBorder};border-radius:10px;padding:20px 24px;">
+        <div style="margin-bottom:12px;">
+          <span style="font-size:20px;font-weight:800;color:${decisionColor};">${decisionLabel}</span>
+          <span style="background:${decisionColor};color:#fff;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;margin-left:10px;">置信度 ${confidence}%</span>
+        </div>
+        <div style="color:#374151;font-size:15px;font-weight:500;line-height:1.6;">${summary}</div>
+      </div>
+    </div>
+    <div style="padding:20px 32px 0;">
+      <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:10px;">📝 分析推理</div>
+      <div style="color:#374151;font-size:14px;line-height:1.8;background:#f8fafc;border-radius:8px;padding:16px 20px;border-left:3px solid #3b82f6;">${reasoning.replace(/\n/g, "<br>")}</div>
+    </div>
+    ${marketContext ? `<div style="padding:20px 32px 0;"><div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:10px;">📊 市场背景</div><div style="color:#374151;font-size:14px;line-height:1.8;background:#f8fafc;border-radius:8px;padding:16px 20px;">${marketContext.replace(/\n/g, "<br>")}</div></div>` : ""}
+    ${riskWarning ? `<div style="padding:20px 32px 0;"><div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:10px;">⚠️ 风险提示</div><div style="color:#92400e;font-size:14px;line-height:1.8;background:#fffbeb;border-radius:8px;padding:16px 20px;border-left:3px solid #f59e0b;">${riskWarning.replace(/\n/g, "<br>")}</div></div>` : ""}
+    <div style="padding:20px 32px;">
+      <a href="${idea.link}" style="display:inline-block;background:#1d4ed8;color:#fff;font-size:14px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">查看 TradingView 原文 →</a>
+    </div>
+    <div style="background:#f1f5f9;padding:16px 32px;border-top:1px solid #e2e8f0;">
+      <div style="color:#94a3b8;font-size:12px;">此邮件由 FXStreet AI 分析系统自动发送 | 来源：TradingView 社区</div>
+      <div style="color:#cbd5e1;font-size:11px;margin-top:4px;">仅供参考，不构成投资建议</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildTvIdeaEmailText(payload: TvIdeaNotifyPayload): string {
+  const { idea, decision, confidence, summary, reasoning, marketContext, riskWarning } = payload;
+  const decisionLabel = decision === "execute" ? "建议执行" : "建议观察";
+  const pairLabel = idea.pair || idea.symbol || "未知品种";
+  const lines: string[] = [
+    `[TradingView 交易想法 AI 分析] ${decisionLabel} | ${pairLabel}`,
+    ``,
+    `标题：${idea.title}`,
+    `作者：${idea.author || "匿名"}`,
+    `货币对：${pairLabel}`,
+    ``,
+    `AI 分析结论：${summary}`,
+    `置信度：${confidence}%`,
+    ``,
+    `分析推理：`,
+    reasoning,
+  ];
+  if (marketContext) lines.push(``, `市场背景：`, marketContext);
+  if (riskWarning) lines.push(``, `风险提示：`, riskWarning);
+  lines.push(``, `原文链接：${idea.link}`, ``, `此邮件由 FXStreet AI 分析系统自动发送，仅供参考，不构成投资建议。`);
+  return lines.join("\n");
+}
+
+/**
+ * 推送 TradingView 交易想法分析结果（邮件 + 飞书）
+ * 返回是否至少有一个渠道推送成功
+ */
+export async function pushTvIdeaAnalysis(payload: TvIdeaNotifyPayload): Promise<boolean> {
+  const config = await getNotifyConfig();
+  if (!config) {
+    console.log(`[NotifyService] No notify config found, skipping TV idea push #${payload.idea.id}`);
+    return false;
+  }
+  let anySuccess = false;
+
+  // 邮件推送
+  if (config.emailEnabled && config.smtpHost && config.smtpUser && config.smtpPass && config.toEmail) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: config.smtpHost,
+        port: config.smtpPort ?? 465,
+        secure: config.smtpSecure ?? true,
+        auth: { user: config.smtpUser, pass: config.smtpPass },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      const decisionLabel = payload.decision === "execute" ? "🟢 建议执行" : "🟡 建议观察";
+      const pairLabel = payload.idea.pair || payload.idea.symbol || "未知品种";
+      const subject = `[TV想法] ${decisionLabel}｜${pairLabel}｜${payload.idea.title.slice(0, 40)}`;
+      await transporter.sendMail({
+        from: `"FX 分析助手" <${config.smtpUser}>`,
+        to: config.toEmail,
+        subject,
+        text: buildTvIdeaEmailText(payload),
+        html: buildTvIdeaEmailHtml(payload),
+      });
+      console.log(`[NotifyService] TV idea email sent to ${config.toEmail} for idea #${payload.idea.id}`);
+      anySuccess = true;
+    } catch (err) {
+      console.error(`[NotifyService] TV idea email failed for idea #${payload.idea.id}:`, err);
+    }
+  }
+
+  // 飞书推送（简洁卡片版）
+  if (config.feishuEnabled && config.feishuWebhookUrl) {
+    try {
+      const decisionLabel = payload.decision === "execute" ? "🟢 建议执行" : "🟡 建议观察";
+      const pairLabel = payload.idea.pair || payload.idea.symbol || "未知品种";
+      const headerColor = payload.decision === "execute" ? "green" : "yellow";
+      const elements: object[] = [
+        { tag: "div", text: { content: `**AI 结论：** ${payload.summary}`, tag: "lark_md" } },
+        { tag: "div", text: { content: `**置信度：** ${payload.confidence}%`, tag: "lark_md" } },
+        { tag: "hr" },
+        { tag: "div", text: { content: `**📝 分析推理**\n${payload.reasoning}`, tag: "lark_md" } },
+      ];
+      if (payload.riskWarning) {
+        elements.push({ tag: "hr" });
+        elements.push({ tag: "div", text: { content: `**⚠️ 风险提示**\n${payload.riskWarning}`, tag: "lark_md" } });
+      }
+      elements.push({ tag: "hr" });
+      elements.push({ tag: "action", actions: [{ tag: "button", text: { content: "查看 TradingView 原文", tag: "plain_text" }, url: payload.idea.link, type: "primary" }] });
+
+      const body = {
+        msg_type: "interactive",
+        card: {
+          schema: "2.0",
+          config: { wide_screen_mode: true },
+          header: {
+            title: { content: `${decisionLabel}｜${pairLabel}｜${payload.idea.title.slice(0, 50)}`, tag: "plain_text" },
+            template: headerColor,
+          },
+          elements,
+        },
+      };
+      const resp = await fetch(config.feishuWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (resp.ok) {
+        console.log(`[NotifyService] TV idea Feishu notification sent for idea #${payload.idea.id}`);
+        anySuccess = true;
+      }
+    } catch (err) {
+      console.error(`[NotifyService] TV idea Feishu failed for idea #${payload.idea.id}:`, err);
+    }
+  }
+
+  if (!config.emailEnabled && !config.feishuEnabled) {
+    console.log(`[NotifyService] All channels disabled, skipping TV idea push #${payload.idea.id}`);
+  }
+  return anySuccess;
+}
