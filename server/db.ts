@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -622,4 +622,111 @@ export async function saveImapConfig(config: { email: string; password: string; 
   await db.update(imapConfig).set({ active: false }).where(eq(imapConfig.active, true));
   // 插入新配置
   await db.insert(imapConfig).values({ ...config, active: true });
+}
+
+// ─── TrendWave 多周期数值 ─────────────────────────────────────────────────────
+
+/**
+ * 批量 upsert TrendWave Bull/Bear/Threshold 数值
+ * 以 (symbol, timeframe, barTime) 为唯一键，重复推送时更新数值
+ */
+export async function upsertTwValues(rows: InsertMt4TwValue[]): Promise<number> {
+  const db = await getDb();
+  if (!db || rows.length === 0) return 0;
+  let saved = 0;
+  for (const row of rows) {
+    try {
+      await db.insert(mt4TwValues).values(row).onDuplicateKeyUpdate({
+        set: { bull: row.bull, bear: row.bear, threshold: row.threshold, pushedAt: new Date() }
+      });
+      saved++;
+    } catch (e) {
+      console.error("[DB] upsertTwValues error:", e);
+    }
+  }
+  return saved;
+}
+
+/**
+ * 查询指定货币对、周期的最新 N 根 TrendWave 数值（按 barTime 降序）
+ */
+export async function getTwValues(symbol: string, timeframe: string, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(mt4TwValues)
+    .where(and(eq(mt4TwValues.symbol, symbol), eq(mt4TwValues.timeframe, timeframe)))
+    .orderBy(desc(mt4TwValues.barTime))
+    .limit(limit);
+}
+
+/**
+ * 查询所有货币对最新一根 TrendWave 数值（供 AI 分析师上下文使用）
+ */
+export async function getLatestTwValues(timeframe: string) {
+  const db = await getDb();
+  if (!db) return [];
+  // 每个 symbol 取最新一条
+  const rows = await db.select().from(mt4TwValues)
+    .where(eq(mt4TwValues.timeframe, timeframe))
+    .orderBy(desc(mt4TwValues.barTime));
+  // 去重：每个 symbol 只保留最新一条
+  const seen = new Set<string>();
+  return rows.filter(r => {
+    if (seen.has(r.symbol)) return false;
+    seen.add(r.symbol);
+    return true;
+  });
+}
+
+// ─── TrendFollower 信号 ───────────────────────────────────────────────────────
+
+/**
+ * 批量 upsert TrendFollower 信号（buy/sell）
+ * 以 (symbol, timeframe, barTime) 为唯一键
+ */
+export async function upsertTfSignals(rows: InsertMt4TfSignal[]): Promise<number> {
+  const db = await getDb();
+  if (!db || rows.length === 0) return 0;
+  let saved = 0;
+  for (const row of rows) {
+    try {
+      await db.insert(mt4TfSignals).values(row).onDuplicateKeyUpdate({
+        set: { signal: row.signal, pushedAt: new Date() }
+      });
+      saved++;
+    } catch (e) {
+      console.error("[DB] upsertTfSignals error:", e);
+    }
+  }
+  return saved;
+}
+
+/**
+ * 查询指定货币对最近 N 条 TrendFollower 信号（按 barTime 降序）
+ */
+export async function getTfSignals(symbol: string, timeframe = "M15", limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(mt4TfSignals)
+    .where(and(eq(mt4TfSignals.symbol, symbol), eq(mt4TfSignals.timeframe, timeframe)))
+    .orderBy(desc(mt4TfSignals.barTime))
+    .limit(limit);
+}
+
+/**
+ * 查询所有货币对最新 TrendFollower 信号（供 AI 分析师上下文使用）
+ */
+export async function getLatestTfSignals(timeframe = "M15", limit = 28) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(mt4TfSignals)
+    .where(eq(mt4TfSignals.timeframe, timeframe))
+    .orderBy(desc(mt4TfSignals.barTime))
+    .limit(limit * 3); // 多取一些再去重
+  const seen = new Set<string>();
+  return rows.filter(r => {
+    if (seen.has(r.symbol)) return false;
+    seen.add(r.symbol);
+    return true;
+  });
 }

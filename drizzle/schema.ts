@@ -358,3 +358,32 @@ export const signalAnalyses = mysqlTable("signal_analyses", {
 
 export type SignalAnalysis = typeof signalAnalyses.$inferSelect;
 export type InsertSignalAnalysis = typeof signalAnalyses.$inferInsert;
+
+// ─── TrendWave 多周期数值表 ──────────────────────────────────────────────────
+// 存储 TrendWave Enhanced 指标的 Bull/Bear/Threshold 时间序列
+// 覆盖 M15、H1、H4 三个周期，供前端判断金叉/死叉和周期共振
+export const mt4TwValues = mysqlTable("mt4_tw_values", {
+  id: int("id").autoincrement().primaryKey(),
+  symbol: varchar("symbol", { length: 16 }).notNull(),       // 货币对，如 EURUSD
+  timeframe: varchar("timeframe", { length: 8 }).notNull(),  // M15 / H1 / H4
+  barTime: timestamp("barTime").notNull(),                   // K 线时间（UTC）
+  bull: varchar("bull", { length: 24 }).notNull(),           // Bull 线值（Buffer 4）
+  bear: varchar("bear", { length: 24 }).notNull(),           // Bear 线值（Buffer 5）
+  threshold: varchar("threshold", { length: 24 }),           // 动态阈值（Buffer 10，正值）
+  pushedAt: timestamp("pushedAt").defaultNow().notNull(),
+});
+export type Mt4TwValue = typeof mt4TwValues.$inferSelect;
+export type InsertMt4TwValue = typeof mt4TwValues.$inferInsert;
+
+// ─── TrendFollower 信号表 ────────────────────────────────────────────────────
+// 存储 TrendFollower 指标在 M15 周期产生的 BUY/SELL 信号（仅非 0 值）
+export const mt4TfSignals = mysqlTable("mt4_tf_signals", {
+  id: int("id").autoincrement().primaryKey(),
+  symbol: varchar("symbol", { length: 16 }).notNull(),       // 货币对，如 EURUSD
+  timeframe: varchar("timeframe", { length: 8 }).notNull(),  // M15
+  barTime: timestamp("barTime").notNull(),                   // 信号所在 K 线时间（UTC）
+  signal: mysqlEnum("signal", ["buy", "sell"]).notNull(),    // 1.0 → buy, -1.0 → sell
+  pushedAt: timestamp("pushedAt").defaultNow().notNull(),
+});
+export type Mt4TfSignal = typeof mt4TfSignals.$inferSelect;
+export type InsertMt4TfSignal = typeof mt4TfSignals.$inferInsert;

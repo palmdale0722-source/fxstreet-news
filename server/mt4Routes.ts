@@ -7,7 +7,7 @@
  */
 import type { Express, Request, Response } from "express";
 import { saveMt4Bars, getMt4Bars, getMt4ConnectionStatus, G8_SYMBOLS, type Mt4PushPayload } from "./mt4Service";
-import { upsertIndicatorSignal } from "./db";
+import { upsertIndicatorSignal, upsertTwValues, upsertTfSignals, getTwValues, getTfSignals } from "./db";
 
 // MT4 API 密钥（用于 EA 鉴权）
 function getMt4ApiKey(): string {
@@ -121,6 +121,122 @@ export function registerMt4Routes(app: Express) {
     } catch (err) {
       console.error("[MT4] Indicator push error:", err);
       res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
+  /**
+   * POST /api/mt4/tw
+   * MT4 EA 推送 TrendWave 多周期 Bull/Bear/Threshold 数值
+   * Body: {
+   *   clientId: string,
+   *   rows: [{ symbol, timeframe, barTime, bull, bear, threshold }]
+   * }
+   */
+  app.post("/api/mt4/tw", async (req: Request, res: Response) => {
+    if (!authCheck(req, res)) return;
+    const { clientId, rows } = req.body as {
+      clientId: string;
+      rows: Array<{
+        symbol: string;
+        timeframe: string;
+        barTime: string;
+        bull: string;
+        bear: string;
+        threshold?: string;
+      }>;
+    };
+    if (!clientId) { res.status(400).json({ success: false, message: "clientId is required" }); return; }
+    if (!Array.isArray(rows) || rows.length === 0) { res.status(400).json({ success: false, message: "rows array is required" }); return; }
+    try {
+      const toInsert = rows
+        .filter(r => r.symbol && r.timeframe && r.barTime && r.bull !== undefined && r.bear !== undefined)
+        .map(r => ({
+          symbol: r.symbol.toUpperCase(),
+          timeframe: r.timeframe,
+          barTime: new Date(r.barTime),
+          bull: r.bull,
+          bear: r.bear,
+          threshold: r.threshold ?? null,
+          pushedAt: new Date(),
+        }));
+      const saved = await upsertTwValues(toInsert);
+      console.log(`[MT4] TrendWave: ${saved} rows from ${clientId}`);
+      res.json({ success: true, saved, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error("[MT4] TW push error:", err);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
+  /**
+   * POST /api/mt4/tf
+   * MT4 EA 推送 TrendFollower 信号（仅 buy/sell，跳过 0）
+   * Body: {
+   *   clientId: string,
+   *   signals: [{ symbol, timeframe, barTime, signal }]
+   * }
+   */
+  app.post("/api/mt4/tf", async (req: Request, res: Response) => {
+    if (!authCheck(req, res)) return;
+    const { clientId, signals } = req.body as {
+      clientId: string;
+      signals: Array<{
+        symbol: string;
+        timeframe: string;
+        barTime: string;
+        signal: "buy" | "sell";
+      }>;
+    };
+    if (!clientId) { res.status(400).json({ success: false, message: "clientId is required" }); return; }
+    if (!Array.isArray(signals) || signals.length === 0) { res.status(400).json({ success: false, message: "signals array is required" }); return; }
+    try {
+      const toInsert = signals
+        .filter(s => s.symbol && s.timeframe && s.barTime && (s.signal === "buy" || s.signal === "sell"))
+        .map(s => ({
+          symbol: s.symbol.toUpperCase(),
+          timeframe: s.timeframe,
+          barTime: new Date(s.barTime),
+          signal: s.signal,
+          pushedAt: new Date(),
+        }));
+      const saved = await upsertTfSignals(toInsert);
+      console.log(`[MT4] TrendFollower: ${saved} signals from ${clientId}`);
+      res.json({ success: true, saved, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error("[MT4] TF push error:", err);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
+  /**
+   * GET /api/mt4/tw/:symbol
+   * 查询指定货币对的 TrendWave 数值序列
+   */
+  app.get("/api/mt4/tw/:symbol", async (req: Request, res: Response) => {
+    const symbol = req.params.symbol.toUpperCase().replace("/", "");
+    const timeframe = (req.query.timeframe as string) || "M15";
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+    try {
+      const rows = await getTwValues(symbol, timeframe, limit);
+      res.json({ success: true, symbol, timeframe, count: rows.length, rows });
+    } catch (err) {
+      res.status(500).json({ success: false, rows: [] });
+    }
+  });
+
+  /**
+   * GET /api/mt4/tf/:symbol
+   * 查询指定货币对的 TrendFollower 信号历史
+   */
+  app.get("/api/mt4/tf/:symbol", async (req: Request, res: Response) => {
+    const symbol = req.params.symbol.toUpperCase().replace("/", "");
+    const timeframe = (req.query.timeframe as string) || "M15";
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    try {
+      const sigs = await getTfSignals(symbol, timeframe, limit);
+      res.json({ success: true, symbol, timeframe, count: sigs.length, signals: sigs });
+    } catch (err) {
+      res.status(500).json({ success: false, signals: [] });
     }
   });
 
