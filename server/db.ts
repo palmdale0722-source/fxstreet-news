@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -763,4 +763,28 @@ export async function deleteTradingConversation(id: number, userId: number) {
   if (!db) return;
   await db.delete(tradingConversations)
     .where(and(eq(tradingConversations.id, id), eq(tradingConversations.userId, userId)));
+}
+
+// ─── 推送通知配置 ─────────────────────────────────────────────────────────────
+
+/** 获取通知配置（全局只有一条，id=1） */
+export async function getNotifyConfig() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(notifyConfig).limit(1);
+  return rows[0] ?? null;
+}
+
+/** 保存通知配置（upsert，始终维护 id=1 的单条记录） */
+export async function saveNotifyConfig(config: Omit<InsertNotifyConfig, "id" | "updatedAt">): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db.select({ id: notifyConfig.id }).from(notifyConfig).limit(1);
+  if (existing.length > 0) {
+    await db.update(notifyConfig)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(notifyConfig.id, existing[0].id));
+  } else {
+    await db.insert(notifyConfig).values({ ...config });
+  }
 }

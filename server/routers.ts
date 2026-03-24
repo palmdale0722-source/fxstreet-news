@@ -49,6 +49,8 @@ import {
   createTradingConversation,
   updateTradingConversation,
   deleteTradingConversation,
+  getNotifyConfig,
+  saveNotifyConfig,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -839,8 +841,124 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
     }),
   }),
 
-  // ─── 历史对话记录路由 ──────────────────────────────────────────────────────────
-  tradingConversation: router({
+   // ─── 推送通知配置路由 ──────────────────────────────────────────────────────
+  notifyConfig: router({
+    // 获取通知配置（密码脱敏）
+    get: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可查看通知配置" });
+      }
+      const config = await getNotifyConfig();
+      if (!config) return null;
+      // 密码脱敏：不返回 SMTP 密码和完整 Webhook URL
+      return {
+        emailEnabled: config.emailEnabled,
+        toEmail: config.toEmail ?? "",
+        smtpHost: config.smtpHost ?? "",
+        smtpPort: config.smtpPort ?? 465,
+        smtpSecure: config.smtpSecure ?? true,
+        smtpUser: config.smtpUser ?? "",
+        smtpPassSet: !!(config.smtpPass),  // 仅告知是否已设置
+        feishuEnabled: config.feishuEnabled,
+        feishuWebhookUrlSet: !!(config.feishuWebhookUrl),  // 仅告知是否已设置
+        feishuWebhookUrlPreview: config.feishuWebhookUrl
+          ? config.feishuWebhookUrl.slice(0, 40) + "..."
+          : "",
+        updatedAt: config.updatedAt,
+      };
+    }),
+    // 保存通知配置
+    save: protectedProcedure
+      .input(z.object({
+        emailEnabled: z.boolean(),
+        toEmail: z.string().email("请输入有效的收件邮箱").optional().or(z.literal("")),
+        smtpHost: z.string().optional().or(z.literal("")),
+        smtpPort: z.number().int().min(1).max(65535).default(465),
+        smtpSecure: z.boolean().default(true),
+        smtpUser: z.string().optional().or(z.literal("")),
+        smtpPass: z.string().optional().or(z.literal("")),  // 空字符串表示不修改
+        feishuEnabled: z.boolean(),
+        feishuWebhookUrl: z.string().url("请输入有效的 Webhook URL").optional().or(z.literal("")),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可修改通知配置" });
+        }
+        // 如果密码为空字符串，保留原有密码
+        const existing = await getNotifyConfig();
+        const smtpPass = input.smtpPass || existing?.smtpPass || undefined;
+        const feishuWebhookUrl = input.feishuWebhookUrl || existing?.feishuWebhookUrl || undefined;
+        await saveNotifyConfig({
+          emailEnabled: input.emailEnabled,
+          toEmail: input.toEmail || undefined,
+          smtpHost: input.smtpHost || undefined,
+          smtpPort: input.smtpPort,
+          smtpSecure: input.smtpSecure,
+          smtpUser: input.smtpUser || undefined,
+          smtpPass: smtpPass || undefined,
+          feishuEnabled: input.feishuEnabled,
+          feishuWebhookUrl: feishuWebhookUrl || undefined,
+        });
+        return { success: true };
+      }),
+    // 测试邮件推送
+    testEmail: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可测试推送" });
+      }
+      const config = await getNotifyConfig();
+      if (!config?.smtpHost || !config?.smtpUser || !config?.smtpPass || !config?.toEmail) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "请先完整配置 SMTP 信息和收件邮箱" });
+      }
+      const nodemailer = await import("nodemailer");
+      const transporter = nodemailer.default.createTransport({
+        host: config.smtpHost,
+        port: config.smtpPort ?? 465,
+        secure: config.smtpSecure ?? true,
+        auth: { user: config.smtpUser, pass: config.smtpPass },
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      await transporter.sendMail({
+        from: `"FX 信号助手" <${config.smtpUser}>`,
+        to: config.toEmail,
+        subject: "【测试】FXStreet 交易信号 AI 推送测试",
+        text: "此邮件是 FXStreet 交易信号 AI 分析系统的测试推送。\n如果您收到此邮件，说明邮件推送配置正确。",
+        html: `<p>此邮件是 <strong>FXStreet 交易信号 AI 分析系统</strong>的测试推送。</p><p>如果您收到此邮件，说明邮件推送配置正确。</p>`,
+      });
+      return { success: true };
+    }),
+    // 测试飞书 Webhook 推送
+    testFeishu: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可测试推送" });
+      }
+      const config = await getNotifyConfig();
+      if (!config?.feishuWebhookUrl) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "请先配置飞书 Webhook URL" });
+      }
+      const response = await fetch(config.feishuWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          msg_type: "text",
+          content: { text: "【测试】FXStreet 交易信号 AI 分析系统推送测试成功！" },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `飞书 Webhook 请求失败: ${response.status}` });
+      }
+      const result = await response.json() as { code?: number; msg?: string };
+      if (result.code !== 0) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `飞书返回错误: ${result.msg}` });
+      }
+      return { success: true };
+    }),
+  }),
+
+  // ─── 历史对话记录路由 ──────────────────────────────────────────────────────
+  tradingConversation: router({r({
     // 获取当前用户的所有历史对话
     list: protectedProcedure.query(async ({ ctx }) => {
       return getTradingConversations(ctx.user.id);

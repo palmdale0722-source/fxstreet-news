@@ -404,3 +404,24 @@ export const mt4TfSignals = mysqlTable("mt4_tf_signals", {
 });
 export type Mt4TfSignal = typeof mt4TfSignals.$inferSelect;
 export type InsertMt4TfSignal = typeof mt4TfSignals.$inferInsert;
+
+// ─── 推送通知配置表 ──────────────────────────────────────────────────────────
+// 存储用户配置的邮件/飞书推送参数，全局只有一条配置（id=1）
+export const notifyConfig = mysqlTable("notify_config", {
+  id: int("id").autoincrement().primaryKey(),
+  // 邮件推送
+  emailEnabled: boolean("emailEnabled").default(false).notNull(),
+  toEmail: varchar("toEmail", { length: 320 }),           // 收件人邮箱
+  smtpHost: varchar("smtpHost", { length: 255 }),         // SMTP 服务器，如 smtp.163.com
+  smtpPort: int("smtpPort").default(465),                 // SMTP 端口，通常 465(SSL) 或 587(TLS)
+  smtpSecure: boolean("smtpSecure").default(true),        // true=SSL/TLS, false=STARTTLS
+  smtpUser: varchar("smtpUser", { length: 320 }),         // SMTP 登录用户名（通常是发件邮箱）
+  smtpPass: varchar("smtpPass", { length: 512 }),         // SMTP 密码或授权码
+  // 飞书 Webhook 推送
+  feishuEnabled: boolean("feishuEnabled").default(false).notNull(),
+  feishuWebhookUrl: varchar("feishuWebhookUrl", { length: 1024 }), // 飞书机器人 Webhook URL
+  // 元数据
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type NotifyConfig = typeof notifyConfig.$inferSelect;
+export type InsertNotifyConfig = typeof notifyConfig.$inferInsert;

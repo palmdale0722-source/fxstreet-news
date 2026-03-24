@@ -152,3 +152,24 @@
 - [x] 支持查看、编辑、删除历史对话记录
 - [x] 数据库新增 trading_conversations 表
 - [ ] AI 分析师上下文注入历史对话摘要（待后续完善）
+## 交易信号自动推送通知
+- [x] 数据库：新增 notify_config 表（存储邮件/飞书推送配置，全局单条记录）
+- [x] 后端：新增 server/notifyService.ts 统一推送服务（邮件 + 飞书 Webhook）
+  - [x] 邮件推送：nodemailer SMTP，发送 HTML 格式分析报告邮件
+  - [x] 飞书推送：Webhook 发送富文本卡片消息（绿色/黄色标题区分决策）
+- [x] 后端：db.ts 新增 getNotifyConfig / saveNotifyConfig 函数
+- [x] 后端：routers.ts 新增 notifyConfig 路由
+  - [x] notifyConfig.get（获取配置，密码脱敏）
+  - [x] notifyConfig.save（保存配置，空密码保留原值）
+  - [x] notifyConfig.testEmail（发送测试邮件）
+  - [x] notifyConfig.testFeishu（发送飞书测试消息）
+- [x] 后端：signalAnalyzer.ts 集成外部推送，分析完成后同时调用 Manus 通知 + 邮件/飞书推送
+  - [x] 任意渠道成功即标记 notified=true
+  - [x] 仅 execute / watch 决策触发推送，ignore 不推送
+- [x] 前端：MySystem.tsx 新增「通知设置」Tab
+  - [x] 邮件推送开关 + SMTP 配置（服务器/端口/SSL/账号/密码）
+  - [x] 飞书 Webhook 推送开关 + URL 配置
+  - [x] 测试按钮（发送测试邮件 / 飞书测试消息）
+  - [x] 密码字段显示/隐藏切换
+  - [x] 保存时空密码不覆盖原有密码
+- [x] 依赖：package.json 新增 nodemailer + @types/nodemailer
