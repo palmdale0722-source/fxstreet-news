@@ -958,7 +958,7 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
   }),
 
   // ─── 历史对话记录路由 ──────────────────────────────────────────────────────
-  tradingConversation: router({r({
+  tradingConversation: router({
     // 获取当前用户的所有历史对话
     list: protectedProcedure.query(async ({ ctx }) => {
       return getTradingConversations(ctx.user.id);

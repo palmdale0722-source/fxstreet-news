@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `notify_config` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `emailEnabled` boolean NOT NULL DEFAULT false,\n  `toEmail` varchar(320),\n  `smtpHost` varchar(255),\n  `smtpPort` int DEFAULT 465,\n  `smtpSecure` boolean DEFAULT true,\n  `smtpUser` varchar(320),\n  `smtpPass` varchar(512),\n  `feishuEnabled` boolean NOT NULL DEFAULT false,\n  `feishuWebhookUrl` varchar(1024),\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE IF NOT EXISTS `notify_config` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `emailEnabled` boolean NOT NULL DEFAULT false,\n  `toEmail` varchar(320),\n  `smtpHost` varchar(255),\n  `smtpPort` int DEFAULT 465,\n  `smtpSecure` boolean DEFAULT true,\n  `smtpUser` varchar(320),\n  `smtpPass` varchar(512),\n  `feishuEnabled` boolean NOT NULL DEFAULT false,\n  `feishuWebhookUrl` varchar(1024),\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1992
+}
