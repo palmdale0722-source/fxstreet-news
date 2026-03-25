@@ -15,6 +15,7 @@ import {
   getActiveTradingSystem,
 } from "./db";
 import { pushTvIdeaAnalysis } from "./notifyService";
+import { notifyOwner } from "./_core/notification";
 import type { TvIdea } from "../drizzle/schema";
 
 // ─── 规范化 API URL ────────────────────────────────────────────────────────────
@@ -248,7 +249,35 @@ async function sendTvIdeaNotification(
   }
 ): Promise<void> {
   let notified = false;
+  const decisionLabel = analysis.decision === "execute" ? "🟢 建议执行" : "🟡 建议观察";
+  const pairLabel = idea.pair || idea.symbol || "未知品种";
 
+  // 1. Manus 内部通知
+  try {
+    const title = `[TV想法] ${decisionLabel}｜${pairLabel}`;
+    const content = [
+      `📰 ${idea.title.slice(0, 80)}`,
+      `作者：${idea.author || "匿名"}`,
+      ``,
+      `📊 AI 分析结论：${analysis.summary}`,
+      `置信度：${analysis.confidence}%`,
+      ``,
+      `📝 分析推理：`,
+      analysis.reasoning,
+      analysis.riskWarning ? `\n⚠️ 风险提示：${analysis.riskWarning}` : "",
+      ``,
+      `🔗 原文：${idea.link}`,
+    ].filter(Boolean).join("\n");
+    const delivered = await notifyOwner({ title, content });
+    if (delivered) {
+      notified = true;
+      console.log(`[TvIdeaAnalyzer] Manus notification sent for idea #${idea.id}`);
+    }
+  } catch (err) {
+    console.warn(`[TvIdeaAnalyzer] Manus notification error for idea #${idea.id}:`, err);
+  }
+
+  // 2. 邮件推送
   try {
     const delivered = await pushTvIdeaAnalysis({
       idea,
@@ -264,7 +293,7 @@ async function sendTvIdeaNotification(
       console.log(`[TvIdeaAnalyzer] Notification sent for idea #${idea.id}`);
     }
   } catch (err) {
-    console.warn(`[TvIdeaAnalyzer] Notification error for idea #${idea.id}:`, err);
+    console.warn(`[TvIdeaAnalyzer] Email notification error for idea #${idea.id}:`, err);
   }
 
   if (notified) {

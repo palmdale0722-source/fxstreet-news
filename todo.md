@@ -173,3 +173,10 @@
   - [x] 密码字段显示/隐藏切换
   - [x] 保存时空密码不覆盖原有密码
 - [x] 依赖：package.json 新增 nodemailer + @types/nodemailer
+
+## 通知机制简化
+- [ ] notifyService.ts 移除 notify_config 数据库依赖，硬编码收件人 3178903@qq.com
+- [ ] notifyService.ts 使用 IMAP 邮箱（IMAP_EMAIL/IMAP_PASSWORD 环境变量）的 SMTP 配置发送邮件
+- [ ] signalAnalyzer.ts 和 tvIdeaAnalyzer.ts 直接调用简化后的推送函数
+- [ ] 移除「交易体系」中的「通知设置」Tab（不再需要配置界面）
+- [ ] 保留 Manus 内部通知（notifyOwner）作为主要通知渠道
