@@ -2,7 +2,7 @@
  * 交易信号 AI 自动分析服务
  *
  * 每当 IMAP 拉取到新信号后，对所有已配置 API 的用户执行 AI 分析，
- * 将结论存入 signal_analyses 表，并通过 Manus 通知服务推送给用户。
+ * 将结论存入 signal_analyses 表，并通过 Manus 内部通知服务推送给用户。
  */
 import {
   getAllUsersWithApiConfig,
@@ -14,7 +14,6 @@ import {
   getActiveTradingSystem,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
-import { pushSignalAnalysis } from "./notifyService";
 import type { Signal } from "../drizzle/schema";
 
 // ─── 规范化 API URL ────────────────────────────────────────────────────────────
@@ -241,7 +240,7 @@ export async function analyzeSignal(signal: Signal): Promise<void> {
   }
 }
 
-// ─── 发送通知 ─────────────────────────────────────────────────────────────────
+// ─── 发送通知（仅 Manus 内部通知）────────────────────────────────────────────
 async function sendSignalNotification(
   signal: Signal,
   analysis: {
@@ -268,45 +267,16 @@ async function sendSignalNotification(
     `📅 接收时间：${signal.receivedAt.toISOString().replace("T", " ").slice(0, 19)} UTC`,
   ].filter(Boolean).join("\n");
 
-  let notified = false;
-
-  // 1. 尝试通过 Manus 内置通知服务推送（平台内通知）
   try {
     const delivered = await notifyOwner({ title, content });
     if (delivered) {
-      notified = true;
+      await markSignalAnalysisNotified(signal.id);
       console.log(`[SignalAnalyzer] Manus notification sent for signal #${signal.id}`);
+    } else {
+      console.warn(`[SignalAnalyzer] Manus notification failed for signal #${signal.id}`);
     }
   } catch (err) {
     console.warn(`[SignalAnalyzer] Manus notification error for signal #${signal.id}:`, err);
-  }
-
-  // 2. 尝试通过用户配置的邮件/飞书渠道推送（外部通知）
-  try {
-    if (analysis.decision === "execute" || analysis.decision === "watch") {
-      const externalDelivered = await pushSignalAnalysis({
-        signal,
-        decision: analysis.decision,
-        confidence: analysis.confidence,
-        summary: analysis.summary,
-        reasoning: analysis.reasoning,
-        marketContext: analysis.marketContext,
-        riskWarning: analysis.riskWarning,
-      });
-      if (externalDelivered) {
-        notified = true;
-        console.log(`[SignalAnalyzer] External notification sent for signal #${signal.id}`);
-      }
-    }
-  } catch (err) {
-    console.warn(`[SignalAnalyzer] External notification error for signal #${signal.id}:`, err);
-  }
-
-  // 3. 标记已通知（只要有任意渠道成功）
-  if (notified) {
-    await markSignalAnalysisNotified(signal.id);
-  } else {
-    console.warn(`[SignalAnalyzer] All notification channels failed for signal #${signal.id}`);
   }
 }
 

@@ -2,7 +2,7 @@
  * TradingView 交易想法 AI 自动分析服务
  *
  * 每小时由 cronJobs 触发，对最近新增的交易想法进行 AI 分析。
- * 对于「建议执行」和「建议观察」的想法，通过邮件推送通知用户。
+ * 对于「建议执行」和「建议观察」的想法，通过 Manus 内部通知推送给用户。
  */
 import {
   getAllUsersWithApiConfig,
@@ -14,7 +14,6 @@ import {
   getLatestInsightAndOutlooks,
   getActiveTradingSystem,
 } from "./db";
-import { pushTvIdeaAnalysis } from "./notifyService";
 import { notifyOwner } from "./_core/notification";
 import type { TvIdea } from "../drizzle/schema";
 
@@ -236,7 +235,7 @@ export async function analyzeTvIdea(idea: TvIdea): Promise<void> {
   }
 }
 
-// ─── 发送通知 ─────────────────────────────────────────────────────────────────
+// ─── 发送通知（仅 Manus 内部通知）────────────────────────────────────────────
 async function sendTvIdeaNotification(
   idea: TvIdea,
   analysis: {
@@ -248,58 +247,34 @@ async function sendTvIdeaNotification(
     riskWarning: string;
   }
 ): Promise<void> {
-  let notified = false;
   const decisionLabel = analysis.decision === "execute" ? "🟢 建议执行" : "🟡 建议观察";
   const pairLabel = idea.pair || idea.symbol || "未知品种";
 
-  // 1. Manus 内部通知
+  const title = `[TV想法] ${decisionLabel}｜${pairLabel}`;
+  const content = [
+    `📰 ${idea.title.slice(0, 80)}`,
+    `作者：${idea.author || "匿名"}`,
+    ``,
+    `📊 AI 分析结论：${analysis.summary}`,
+    `置信度：${analysis.confidence}%`,
+    ``,
+    `📝 分析推理：`,
+    analysis.reasoning,
+    analysis.riskWarning ? `\n⚠️ 风险提示：${analysis.riskWarning}` : "",
+    ``,
+    `🔗 原文：${idea.link}`,
+  ].filter(Boolean).join("\n");
+
   try {
-    const title = `[TV想法] ${decisionLabel}｜${pairLabel}`;
-    const content = [
-      `📰 ${idea.title.slice(0, 80)}`,
-      `作者：${idea.author || "匿名"}`,
-      ``,
-      `📊 AI 分析结论：${analysis.summary}`,
-      `置信度：${analysis.confidence}%`,
-      ``,
-      `📝 分析推理：`,
-      analysis.reasoning,
-      analysis.riskWarning ? `\n⚠️ 风险提示：${analysis.riskWarning}` : "",
-      ``,
-      `🔗 原文：${idea.link}`,
-    ].filter(Boolean).join("\n");
     const delivered = await notifyOwner({ title, content });
     if (delivered) {
-      notified = true;
+      await markTvIdeaAnalysisNotified(idea.id);
       console.log(`[TvIdeaAnalyzer] Manus notification sent for idea #${idea.id}`);
+    } else {
+      console.warn(`[TvIdeaAnalyzer] Manus notification failed for idea #${idea.id}`);
     }
   } catch (err) {
     console.warn(`[TvIdeaAnalyzer] Manus notification error for idea #${idea.id}:`, err);
-  }
-
-  // 2. 邮件推送
-  try {
-    const delivered = await pushTvIdeaAnalysis({
-      idea,
-      decision: analysis.decision as "execute" | "watch",
-      confidence: analysis.confidence,
-      summary: analysis.summary,
-      reasoning: analysis.reasoning,
-      marketContext: analysis.marketContext,
-      riskWarning: analysis.riskWarning,
-    });
-    if (delivered) {
-      notified = true;
-      console.log(`[TvIdeaAnalyzer] Notification sent for idea #${idea.id}`);
-    }
-  } catch (err) {
-    console.warn(`[TvIdeaAnalyzer] Email notification error for idea #${idea.id}:`, err);
-  }
-
-  if (notified) {
-    await markTvIdeaAnalysisNotified(idea.id);
-  } else {
-    console.warn(`[TvIdeaAnalyzer] All notification channels failed for idea #${idea.id}`);
   }
 }
 
