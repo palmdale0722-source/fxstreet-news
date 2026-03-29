@@ -55,10 +55,11 @@ import {
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
-import { restartImapJobs } from "./cronJobs";
+import { restartImapJobs, safeRunStrengthMatrix } from "./cronJobs";
 import { invokeLLM } from "./_core/llm";
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
+import { getCurrencyStrengthCache } from "./db";
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -957,7 +958,30 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
     }),
   }),
 
-  // ─── 历史对话记录路由 ──────────────────────────────────────────────────────
+  // ─── 货币强弱矩阵路由 ──────────────────────────────────────────────────────────
+  currencyStrength: router({
+    // 获取最新的货币强弱矩阵缓存
+    getMatrix: publicProcedure.query(async () => {
+      const cache = await getCurrencyStrengthCache();
+      if (!cache) return null;
+      return {
+        matrix: JSON.parse(cache.matrixJson),
+        economicSummaries: cache.economicSummariesJson ? JSON.parse(cache.economicSummariesJson) : null,
+        generatedAt: cache.generatedAt,
+      };
+    }),
+
+    // 手动触发重新生成（仅管理员）
+    triggerRefresh: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可触发货币强弱矩阵更新" });
+      }
+      safeRunStrengthMatrix("manual-trpc").catch(console.error);
+      return { success: true, message: "货币强弱矩阵生成已触发，请稍后刷新查看结果" };
+    }),
+  }),
+
+  // ─── 历史对话记录路由 ──────────────────────────────────────────────
   tradingConversation: router({
     // 获取当前用户的所有历史对话
     list: protectedProcedure.query(async ({ ctx }) => {

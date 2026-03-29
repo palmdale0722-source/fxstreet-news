@@ -442,3 +442,17 @@ export const tvIdeaAnalyses = mysqlTable("tv_idea_analyses", {
 });
 export type TvIdeaAnalysis = typeof tvIdeaAnalyses.$inferSelect;
 export type InsertTvIdeaAnalysis = typeof tvIdeaAnalyses.$inferInsert;
+
+// ─── 货币强弱矩阵缓存表 ──────────────────────────────────────────────────────
+// 存储 AI 生成的 G8 货币强弱评分矩阵（每小时更新一次）
+export const currencyStrengthCache = mysqlTable("currency_strength_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  // 存储整个矩阵的 JSON 序列化结果
+  matrixJson: text("matrixJson").notNull(),          // CurrencyStrengthMatrix JSON
+  economicSummariesJson: text("economicSummariesJson"), // CountryEconomicSummary[] JSON
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CurrencyStrengthCacheRow = typeof currencyStrengthCache.$inferSelect;
+export type InsertCurrencyStrengthCache = typeof currencyStrengthCache.$inferInsert;

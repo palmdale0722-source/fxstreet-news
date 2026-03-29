@@ -1,7 +1,9 @@
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
-import { getActiveImapConfig } from "./db";
+import { getActiveImapConfig, saveCurrencyStrengthCache, getCurrencyStrengthCache } from "./db";
 import { analyzeNewTvIdeas } from "./tvIdeaAnalyzer";
+import { generateCurrencyStrengthMatrix, generateEconomicSummaries } from "./currencyStrengthService";
+import { fetchAllCountriesEconomicData } from "./dataScraperService";
 import type { Express } from "express";
 
 let cronTimer: NodeJS.Timeout | null = null;
@@ -9,6 +11,8 @@ let isRunning = false;
 
 let imapTimer: NodeJS.Timeout | null = null;
 let isImapRunning = false;
+
+let isStrengthRunning = false;
 
 // 每小时执行一次
 const CRON_INTERVAL_MS = 60 * 60 * 1000;
@@ -113,10 +117,39 @@ async function safeRunUpdate(trigger: string) {
         console.error(`[Cron] TV Idea analysis failed:`, e);
       }
     }, 5000);
+
+    // 延迟 30 秒后更新货币强弱矩阵（避免与 RSS 抓取并发）
+    setTimeout(() => safeRunStrengthMatrix("post-update").catch(console.error), 30000);
   } catch (e) {
     console.error(`[Cron] Update failed:`, e);
   } finally {
     isRunning = false;
+  }
+}
+
+/** 安全运行货币强弱矩阵生成（带防并发保护） */
+export async function safeRunStrengthMatrix(trigger: string) {
+  if (isStrengthRunning) {
+    console.log(`[StrengthMatrix] Already running, skipping ${trigger}`);
+    return;
+  }
+  isStrengthRunning = true;
+  console.log(`[StrengthMatrix] Generating G8 currency strength matrix (trigger: ${trigger})...`);
+  try {
+    const [matrix, economicData] = await Promise.all([
+      generateCurrencyStrengthMatrix(),
+      fetchAllCountriesEconomicData(),
+    ]);
+    const summaries = await generateEconomicSummaries(economicData);
+    await saveCurrencyStrengthCache({
+      matrixJson: JSON.stringify(matrix),
+      economicSummariesJson: JSON.stringify(summaries),
+    });
+    console.log(`[StrengthMatrix] Done: ${matrix.scores.length} currencies scored, ${matrix.picks.length} picks generated`);
+  } catch (e) {
+    console.error(`[StrengthMatrix] Failed (${trigger}):`, e);
+  } finally {
+    isStrengthRunning = false;
   }
 }
 
@@ -141,6 +174,22 @@ export function registerAdminRoutes(app: Express) {
 
   // 查询更新状态
   app.get("/api/admin/status", (req, res) => {
-    res.json({ isRunning, timestamp: new Date().toISOString() });
+    res.json({ isRunning, isStrengthRunning, timestamp: new Date().toISOString() });
+  });
+
+  // 手动触发货币强弱矩阵更新
+  app.post("/api/admin/trigger-strength-matrix", async (req, res) => {
+    const secret = req.headers["x-admin-secret"] || req.query.secret;
+    const adminSecret = process.env.ADMIN_SECRET || "fxstreet-admin-2026";
+    if (secret !== adminSecret) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+    if (isStrengthRunning) {
+      res.status(409).json({ success: false, message: "Strength matrix generation already in progress" });
+      return;
+    }
+    safeRunStrengthMatrix("manual").catch(console.error);
+    res.json({ success: true, message: "Strength matrix generation triggered" });
   });
 }

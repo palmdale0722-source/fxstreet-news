@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -843,4 +843,32 @@ export async function getUnanalyzedTvIdeas(sinceHours = 2, limit = 20) {
     .where(sql`${tvIdeaAnalyses.tvIdeaId} IN (${sql.join(recentIdeas.map(i => sql`${i.id}`), sql`, `)})`);
   const analyzedIds = new Set(analyzed.map(a => a.tvIdeaId));
   return recentIdeas.filter(i => !analyzedIds.has(i.id)).slice(0, limit);
+}
+
+// ─── 货币强弱矩阵缓存 ─────────────────────────────────────────────────────────
+
+/** 获取最新的货币强弱矩阵缓存（只有一条记录，id=1） */
+export async function getCurrencyStrengthCache() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(currencyStrengthCache)
+    .orderBy(desc(currencyStrengthCache.generatedAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** 保存货币强弱矩阵缓存（upsert，始终维护最新一条记录） */
+export async function saveCurrencyStrengthCache(data: {
+  matrixJson: string;
+  economicSummariesJson?: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // 删除旧记录，插入新记录（保持只有一条）
+  await db.delete(currencyStrengthCache);
+  await db.insert(currencyStrengthCache).values({
+    matrixJson: data.matrixJson,
+    economicSummariesJson: data.economicSummariesJson ?? null,
+    generatedAt: new Date(),
+  });
 }
