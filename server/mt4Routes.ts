@@ -269,7 +269,7 @@ export function registerMt4Routes(app: Express) {
     }
 
     try {
-      const bars = await getMt4Bars(symbol, limit, timeframe);
+      const bars = await getMt4Bars(symbol, limit);
       res.json({ success: true, symbol, timeframe, count: bars.length, bars });
     } catch (err) {
       console.error("[MT4] Bars query error:", err);

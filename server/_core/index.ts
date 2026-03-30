@@ -33,9 +33,22 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // 设置 HTTP 服务器超时（30 秒，足以处理数据库操作）
+  server.setTimeout(30000);
+  server.keepAliveTimeout = 65000;
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // 为 MT4 推送接口设置更长的超时（防止 5203 错误）
+  app.use((req, res, next) => {
+    if (req.path === '/api/mt4/push' || req.path === '/api/mt4/indicators') {
+      res.setTimeout(30000);
+    }
+    next();
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Admin routes (manual trigger update)
@@ -68,6 +81,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    console.log(`[Server] HTTP timeout: 30s, keepAliveTimeout: 65s`);
     // Start cron jobs after server is ready
     startCronJobs();
     startImapJobs();

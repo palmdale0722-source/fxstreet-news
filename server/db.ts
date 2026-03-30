@@ -864,11 +864,22 @@ export async function saveCurrencyStrengthCache(data: {
 }): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // 删除旧记录，插入新记录（保持只有一条）
-  await db.delete(currencyStrengthCache);
-  await db.insert(currencyStrengthCache).values({
-    matrixJson: data.matrixJson,
-    economicSummariesJson: data.economicSummariesJson ?? null,
-    generatedAt: new Date(),
-  });
+  try {
+    // 先尝试删除旧记录
+    try {
+      await db.delete(currencyStrengthCache);
+    } catch (e) {
+      // 如果表不存在或删除失败，继续插入
+      console.warn("[DB] Warning deleting old cache:", e);
+    }
+    // 插入新记录
+    await db.insert(currencyStrengthCache).values({
+      matrixJson: data.matrixJson,
+      economicSummariesJson: data.economicSummariesJson ?? null,
+      generatedAt: new Date(),
+    });
+  } catch (error) {
+    console.error("[DB] Failed to save currency strength cache:", error);
+    throw error;
+  }
 }

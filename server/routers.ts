@@ -322,7 +322,7 @@ export const appRouter = router({
           getNewsContextForAgent(20),
           getLatestInsightAndOutlooks(),
           input.pair ? getForexQuote(input.pair) : Promise.resolve(null),
-          input.pair ? getMt4Bars(input.pair, 100, "M15") : Promise.resolve([]),
+          input.pair ? getMt4Bars(input.pair, 100) : Promise.resolve([]),
           input.pair ? getTvIdeasForAgent(input.pair, 5) : Promise.resolve([]),
           getActiveTradingSystem(ctx.user.id),
           input.pair ? getTradeJournalForAgent(ctx.user.id, input.pair, 5) : Promise.resolve([]),
