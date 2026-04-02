@@ -456,3 +456,18 @@ export const currencyStrengthCache = mysqlTable("currency_strength_cache", {
 
 export type CurrencyStrengthCacheRow = typeof currencyStrengthCache.$inferSelect;
 export type InsertCurrencyStrengthCache = typeof currencyStrengthCache.$inferInsert;
+
+// ─── TradingView 新闻流表 ────────────────────────────────────────────────────
+// 存储从 TradingView 新闻流定期抓取的新闻内容
+export const tradingviewNews = mysqlTable("tradingview_news", {
+  id: int("id").autoincrement().primaryKey(),
+  title: text("title").notNull(),                    // 新闻标题
+  link: varchar("link", { length: 1024 }).notNull().unique(), // 新闻链接
+  description: text("description"),                 // 新闻摘要
+  publishedAt: timestamp("publishedAt").notNull(), // 发布时间
+  source: varchar("source", { length: 255 }).default("TradingView").notNull(), // 来源
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TradingViewNews = typeof tradingviewNews.$inferSelect;
+export type InsertTradingViewNews = typeof tradingviewNews.$inferInsert;

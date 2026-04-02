@@ -180,3 +180,18 @@
 - [ ] signalAnalyzer.ts 和 tvIdeaAnalyzer.ts 直接调用简化后的推送函数
 - [ ] 移除「交易体系」中的「通知设置」Tab（不再需要配置界面）
 - [ ] 保留 Manus 内部通知（notifyOwner）作为主要通知渠道
+
+## TradingView 新闻流集成
+- [ ] 数据库：新增 tradingview_news 表（存储 TradingView 新闻流）
+- [ ] 后端：实现 TradingView 新闻流爬虫（标题、发布时间、摘要、链接）
+- [ ] 后端：定时任务每小时抓取一次 TradingView 新闻流
+- [ ] 后端：tRPC news.getTradingViewNews 接口
+- [ ] 前端：删除"专家分析"栏目
+- [ ] 前端：修改"FXStreet 新闻"页面，右侧改为显示 TradingView 新闻流
+
+## G8 货币强弱矩阵 LLM 修复
+- [x] 问题诊断：用户配置的 LLM API 在处理大型请求时超时（503 Service Unavailable）
+- [x] 修改 currencyStrengthService.ts 使用 Manus 内置 LLM API（invokeLLM）
+- [x] 修改 generateEconomicSummaries 使用 Manus 内置 LLM API
+- [x] 删除不再使用的 callUserLLM 和 normalizeApiUrl 函数
+- [x] 测试验证：货币强弱矩阵和刺客精选成功生成

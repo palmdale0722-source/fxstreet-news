@@ -10,7 +10,7 @@
  *   - 综合评分 = score_top*0.3 + score_mid*0.4 + score_bottom*0.3  ∈ [-3, +3]
  */
 
-import { getAllUsersWithApiConfig } from "./db";
+import { invokeLLM } from "./_core/llm";
 import {
   fetchAllCountriesEconomicData,
   fetchAllCentralBankNews,
@@ -103,66 +103,6 @@ const CURRENCY_META: Record<string, { name: string; flag: string; riskLabel: str
 };
 
 const G8_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "AUD", "NZD", "CAD", "CHF"] as const;
-
-// ─── 规范化 API URL ────────────────────────────────────────────────────────────
-
-function normalizeApiUrl(url: string): string {
-  let apiUrl = url.trim().replace(/\/$/, "");
-  if (!apiUrl.endsWith("/chat/completions")) {
-    if (apiUrl.endsWith("/v1")) {
-      apiUrl = apiUrl + "/chat/completions";
-    } else if (!apiUrl.includes("/v1")) {
-      apiUrl = apiUrl + "/v1/chat/completions";
-    } else {
-      apiUrl = apiUrl + "/chat/completions";
-    }
-  }
-  return apiUrl;
-}
-
-// ─── 调用用户 LLM API ─────────────────────────────────────────────────────────
-
-async function callUserLLM(
-  apiUrl: string,
-  apiKey: string,
-  model: string,
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  maxTokens = 8192
-): Promise<string> {
-  const url = normalizeApiUrl(apiUrl);
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.3,
-      max_tokens: maxTokens,
-    }),
-    signal: AbortSignal.timeout(120000), // 2分钟超时
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`AI API 请求失败 (${response.status}): ${errText.slice(0, 200)}`);
-  }
-
-  const data = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>;
-    error?: { message?: string };
-  };
-
-  if (data.error) {
-    throw new Error(`AI API 返回错误: ${data.error.message}`);
-  }
-
-  return data.choices?.[0]?.message?.content ?? "";
-}
-
-// ─── 构建货币强弱评分 Prompt ──────────────────────────────────────────────────
 
 function buildCurrencyStrengthPrompt(
   economicData: CountryEconomicData[],
@@ -489,13 +429,8 @@ function parsePicksResponse(content: string, scores: CurrencyStrengthScore[]): A
 export async function generateCurrencyStrengthMatrix(): Promise<CurrencyStrengthMatrix> {
   console.log("[CurrencyStrength] Starting matrix generation...");
 
-  // 1. 获取用户 API 配置
-  const users = await getAllUsersWithApiConfig();
-  if (users.length === 0) {
-    throw new Error("未找到用户 AI API 配置，请先在 AI 分析师页面配置 API");
-  }
-  const userConfig = users[0];
-  console.log(`[CurrencyStrength] Using API config for user ${userConfig.userId}`);
+  // 1. 使用 Manus 内置 LLM API
+  console.log(`[CurrencyStrength] Using Manus built-in LLM API`);
 
   // 2. 并行抓取所有数据
   console.log("[CurrencyStrength] Fetching data sources...");
@@ -523,20 +458,19 @@ export async function generateCurrencyStrengthMatrix(): Promise<CurrencyStrength
 
   let scores: CurrencyStrengthScore[] = [];
   try {
-    const scoreResponse = await callUserLLM(
-      userConfig.apiUrl,
-      userConfig.apiKey,
-      userConfig.model,
-      [
+    const scoreResponse = await invokeLLM({
+      messages: [
         {
           role: "system",
           content: "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出，不要有任何多余文字。",
         },
         { role: "user", content: scorePrompt },
       ],
-      8192
-    );
-    scores = parseScoreResponse(scoreResponse);
+    });
+    const responseText = typeof scoreResponse.choices?.[0]?.message?.content === 'string' 
+      ? scoreResponse.choices[0].message.content 
+      : "";
+    scores = parseScoreResponse(responseText);
     console.log(`[CurrencyStrength] Generated scores for ${scores.length} currencies`);
   } catch (e) {
     console.error("[CurrencyStrength] Score generation failed:", e);
@@ -548,20 +482,19 @@ export async function generateCurrencyStrengthMatrix(): Promise<CurrencyStrength
   let picks: AssassinPick[] = [];
   try {
     const picksPrompt = buildAssassinPicksPrompt(scores, economicData, centralBankNews);
-    const picksResponse = await callUserLLM(
-      userConfig.apiUrl,
-      userConfig.apiKey,
-      userConfig.model,
-      [
+    const picksResponse = await invokeLLM({
+      messages: [
         {
           role: "system",
           content: "你是专业外汇基本面分析师，精通刺客原则——只狙击强弱差最大的货币对。请严格按照 JSON 格式输出，不要有任何多余文字。",
         },
         { role: "user", content: picksPrompt },
       ],
-      8192
-    );
-    picks = parsePicksResponse(picksResponse, scores);
+    });
+    const responseText = typeof picksResponse.choices?.[0]?.message?.content === 'string' 
+      ? picksResponse.choices[0].message.content 
+      : "";
+    picks = parsePicksResponse(responseText, scores);
     console.log(`[CurrencyStrength] Generated ${picks.length} assassin picks`);
   } catch (e) {
     console.error("[CurrencyStrength] Picks generation failed:", e);
@@ -596,9 +529,6 @@ export interface CountryEconomicSummary {
 export async function generateEconomicSummaries(
   economicData: CountryEconomicData[]
 ): Promise<CountryEconomicSummary[]> {
-  const users = await getAllUsersWithApiConfig();
-  if (users.length === 0) throw new Error("未找到用户 AI API 配置");
-  const userConfig = users[0];
 
   const dataText = formatEconomicDataForPrompt(economicData);
 
@@ -627,18 +557,17 @@ ${dataText}
 3. 严格基于提供的数据进行分析`;
 
   try {
-    const response = await callUserLLM(
-      userConfig.apiUrl,
-      userConfig.apiKey,
-      userConfig.model,
-      [
+    const response = await invokeLLM({
+      messages: [
         { role: "system", content: "你是专业宏观经济分析师，输出严格的JSON格式，不要有任何多余文字。" },
         { role: "user", content: prompt },
       ],
-      4096
-    );
+    });
 
-    const cleaned = response
+    const responseText = typeof response.choices?.[0]?.message?.content === 'string' 
+      ? response.choices[0].message.content 
+      : "";
+    const cleaned = responseText
       .replace(/^```(?:json)?\s*/im, "")
       .replace(/\s*```\s*$/m, "")
       .trim();

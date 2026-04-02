@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache, tradingviewNews, InsertTradingViewNews } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -881,5 +881,37 @@ export async function saveCurrencyStrengthCache(data: {
   } catch (error) {
     console.error("[DB] Failed to save currency strength cache:", error);
     throw error;
+  }
+}
+
+
+// ─── TradingView 新闻 ─────────────────────────────────────────────────────────
+
+export async function getRecentTradingViewNews(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(tradingviewNews)
+      .orderBy(desc(tradingviewNews.publishedAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[DB] Failed to get TradingView news:", error);
+    return [];
+  }
+}
+
+export async function saveTradingViewNews(data: InsertTradingViewNews): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(tradingviewNews).values(data).onDuplicateKeyUpdate({
+      set: {
+        title: data.title,
+        description: data.description,
+        publishedAt: data.publishedAt,
+      }
+    });
+  } catch (error) {
+    console.error("[DB] Failed to save TradingView news:", error);
   }
 }
