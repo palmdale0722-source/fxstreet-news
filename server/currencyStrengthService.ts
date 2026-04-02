@@ -474,7 +474,32 @@ export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): 
     throw e;
   }
 
-  // 4. AI 生成刺客精选
+  // 4. 如果是分组更新，需要从数据库读取已有数据并合并
+  if (currencyGroup && currencyGroup.length < 8) {
+    console.log("[CurrencyStrength] Merging with existing cache data...");
+    try {
+      const { getCurrencyStrengthCache } = await import("./db");
+      const cache = await getCurrencyStrengthCache();
+      if (cache && cache.matrixJson) {
+        const existingMatrix = JSON.parse(cache.matrixJson);
+        const existingScores = existingMatrix.scores || [];
+        
+        // 合并：用新数据替换对应货币，保留其他货币
+        const updatedCurrencies = new Set(scores.map(s => s.currency));
+        const mergedScores = [
+          ...scores,
+          ...existingScores.filter((s: CurrencyStrengthScore) => !updatedCurrencies.has(s.currency))
+        ];
+        scores = mergedScores;
+        console.log(`[CurrencyStrength] Merged scores: now have ${scores.length} currencies`);
+      }
+    } catch (e) {
+      console.error("[CurrencyStrength] Failed to merge with cache:", e);
+      // 继续执行，不中断流程
+    }
+  }
+
+  // 5. AI 生成刺客精选（基于完整的 8 个货币）
   console.log("[CurrencyStrength] Generating assassin picks...");
   let picks: AssassinPick[] = [];
   try {

@@ -59,8 +59,34 @@ export async function updateCurrencyDrivers(currencyGroup?: string[]): Promise<C
       ? response.choices[0].message.content
       : "";
 
-    const scores = parseDriversResponse(responseText);
+    let scores = parseDriversResponse(responseText);
     console.log(`[CurrencyDrivers] Generated scores for ${scores.length} currencies`);
+    
+    // 如果是分组更新，需要从数据库读取已有数据并合并
+    if (currencyGroup && currencyGroup.length < 8) {
+      console.log("[CurrencyDrivers] Merging with existing cache data...");
+      try {
+        const { getCurrencyStrengthCache } = await import("./db");
+        const cache = await getCurrencyStrengthCache();
+        if (cache && cache.matrixJson) {
+          const existingMatrix = JSON.parse(cache.matrixJson);
+          const existingScores = existingMatrix.scores || [];
+          
+          // 合并：用新数据替换对应货币，保留其他货币
+          const updatedCurrencies = new Set(scores.map(s => s.currency));
+          const mergedScores = [
+            ...scores,
+            ...existingScores.filter((s: CurrencyStrengthScore) => !updatedCurrencies.has(s.currency))
+          ];
+          scores = mergedScores;
+          console.log(`[CurrencyDrivers] Merged scores: now have ${scores.length} currencies`);
+        }
+      } catch (e) {
+        console.error("[CurrencyDrivers] Failed to merge with cache:", e);
+        // 继续执行，不中断流程
+      }
+    }
+    
     return scores;
   } catch (e) {
     console.error("[CurrencyDrivers] Update failed:", e);

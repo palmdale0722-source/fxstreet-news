@@ -620,6 +620,26 @@ function CurrencyStrengthSection() {
   const updatePicks = trpc.currencyStrength.updatePicks.useMutation();
   const updateRanking = trpc.currencyStrength.updateRanking.useMutation();
   
+  // 完整流程：先更新驱动力（所有 8 个货币），再更新刺客精选和排行榜
+  const handleUpdateAll = async () => {
+    try {
+      // 1. 先更新驱动力（获取全部 8 个货币的评分）
+      const driversResult = await updateDrivers.mutateAsync();
+      const drivers = driversResult.data || [];
+      
+      // 2. 并行更新刺客精选和排行榜（基于完整的驱动力数据）
+      await Promise.all([
+        updatePicks.mutateAsync({ drivers }),
+        updateRanking.mutateAsync({ drivers })
+      ]);
+      
+      toast.success("G8 货币矩阵已完整更新（8 个货币）");
+      refetch();
+    } catch (error: any) {
+      toast.error(`更新失败: ${error.message || "未知错误"}`);
+    }
+  };
+  
   // 处理更新
   const handleUpdateDrivers = async () => {
     try {
@@ -633,7 +653,10 @@ function CurrencyStrengthSection() {
   
   const handleUpdatePicks = async () => {
     try {
-      await updatePicks.mutateAsync({ drivers: [] });
+      // 先获取最新的驱动力数据
+      const driversResult = await updateDrivers.mutateAsync();
+      const drivers = driversResult.data || [];
+      await updatePicks.mutateAsync({ drivers });
       toast.success("刺客精选已更新");
       refetch();
     } catch (error: any) {
@@ -643,7 +666,10 @@ function CurrencyStrengthSection() {
   
   const handleUpdateRanking = async () => {
     try {
-      await updateRanking.mutateAsync({ drivers: [] });
+      // 先获取最新的驱动力数据
+      const driversResult = await updateDrivers.mutateAsync();
+      const drivers = driversResult.data || [];
+      await updateRanking.mutateAsync({ drivers });
       toast.success("实时强弱排行榜已更新");
       refetch();
     } catch (error: any) {
