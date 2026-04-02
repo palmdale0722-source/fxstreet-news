@@ -292,6 +292,82 @@ export const appRouter = router({
         };
       }),
 
+    // 测试 API 连接
+    testConnection: protectedProcedure
+      .input(z.object({
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        // 规范化 API URL
+        let apiUrl = input.apiUrl.trim().replace(/\/$/, "");
+        if (!apiUrl.endsWith("/chat/completions")) {
+          if (apiUrl.endsWith("/v1")) {
+            apiUrl = apiUrl + "/chat/completions";
+          } else if (!apiUrl.includes("/v1")) {
+            apiUrl = apiUrl + "/v1/chat/completions";
+          } else {
+            apiUrl = apiUrl + "/chat/completions";
+          }
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 秒超时
+
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${input.apiKey}`,
+            },
+            body: JSON.stringify({
+              model: input.model,
+              messages: [
+                { role: "system", content: "你是一个有效的 AI 助手。" },
+                { role: "user", content: "Hello, please respond with a single word." },
+              ],
+              temperature: 0.7,
+              max_tokens: 10,
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            throw new Error(`API 返回错误 (${response.status}): ${errorText.slice(0, 200)}`);
+          }
+
+          const data = await response.json() as any;
+          if (data.error) {
+            throw new Error(`API 错误: ${data.error.message || JSON.stringify(data.error)}`);
+          }
+          if (!data.choices?.[0]?.message?.content) {
+            throw new Error("响应格式不正常，未找到内容字段");
+          }
+
+          return {
+            success: true,
+            message: "连接成功！你的 API 配置正常工作。",
+            response: data.choices[0].message.content.slice(0, 100),
+          };
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          if (errorMsg.includes("AbortError")) {
+            throw new TRPCError({
+              code: "TIMEOUT",
+              message: "连接超时（超过10秒），请检查 API 端点是否可达。",
+            });
+          }
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `连接失败: ${errorMsg}`,
+          });
+        }
+      }),
+
     // 核心：流式对话（返回完整回复，同时存入数据库）
     chat: protectedProcedure
       .input(z.object({

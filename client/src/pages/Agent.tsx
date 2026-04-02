@@ -50,6 +50,54 @@ const saveConfig = (config: ApiConfig) => {
   localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
 };
 
+// ─── 测试连接按钮组件 ─────────────────────────────────────────────────────────
+function TestConnectionButton({ config }: { config: ApiConfig }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const testMutation = trpc.agent.testConnection.useMutation();
+
+  const handleTest = async () => {
+    if (!config.apiUrl.trim()) { toast.error("请输入 API 地址"); return; }
+    if (!config.apiKey.trim()) { toast.error("请输入 API Key"); return; }
+    if (!config.model.trim()) { toast.error("请输入模型名称"); return; }
+
+    setIsLoading(true);
+    try {
+      const result = await testMutation.mutateAsync({
+        apiUrl: config.apiUrl,
+        apiKey: config.apiKey,
+        model: config.model,
+      });
+      toast.success(result.message);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleTest}
+      disabled={isLoading}
+      variant="outline"
+      className="flex-1"
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+          测试中...
+        </>
+      ) : (
+        <>
+          <Wifi className="w-4 h-4 mr-1.5" />
+          测试连接
+        </>
+      )}
+    </Button>
+  );
+}
+
 // ─── API 配置面板组件 ─────────────────────────────────────────────────────────
 function ApiSettingsPanel({
   config,
@@ -204,6 +252,7 @@ function ApiSettingsPanel({
         </div>
 
         <div className="flex gap-2 p-5 pt-0">
+          <TestConnectionButton config={form} />
           <Button onClick={handleSave} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
             <CheckCircle2 className="w-4 h-4 mr-1.5" />
             保存配置
