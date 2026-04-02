@@ -14,7 +14,13 @@ let isImapRunning = false;
 
 let isStrengthRunning = false;
 
-// 每小时执行一次
+// 每 4 小时执行一次货币强弱矩阵更新
+const STRENGTH_MATRIX_INTERVAL_MS = 4 * 60 * 60 * 1000;
+// 第 1 组（USD/EUR/JPY/GBP）在偶数小时（0、4、8、12、16、20）
+const GROUP1_CURRENCIES = ["USD", "EUR", "JPY", "GBP"];
+// 第 2 组（AUD/NZD/CAD/CHF）在奇数小时（2、6、10、14、18、22）
+const GROUP2_CURRENCIES = ["AUD", "NZD", "CAD", "CHF"];
+// 每小时执行一次其他更新任务
 const CRON_INTERVAL_MS = 60 * 60 * 1000;
 // 每 5 分钟拉取一次邮件
 const IMAP_INTERVAL_MS = 5 * 60 * 1000;
@@ -31,6 +37,39 @@ export function startCronJobs() {
   cronTimer = setInterval(async () => {
     await safeRunUpdate("scheduled");
   }, CRON_INTERVAL_MS);
+
+  // 启动分组货币强弱矩阵更新（每 4 小时）
+  startGroupedStrengthMatrixUpdates();
+}
+
+// 启动分组货币强弱矩阵定时更新
+function startGroupedStrengthMatrixUpdates() {
+  console.log("[StrengthMatrix] Starting grouped updates (every 4 hours)");
+
+  // 计算距离下一个偶数小时的延迟
+  const now = new Date();
+  const currentHour = now.getHours();
+  const nextEvenHour = currentHour % 2 === 0 ? currentHour : currentHour + 1;
+  const minutesUntilNextEven = (nextEvenHour - currentHour) * 60 - now.getMinutes();
+  const delayToFirstEven = Math.max(0, minutesUntilNextEven * 60 * 1000);
+
+  // 第一次更新：第 1 组（偶数小时）
+  setTimeout(() => {
+    safeRunStrengthMatrix("scheduled", GROUP1_CURRENCIES).catch(console.error);
+    // 之后每 4 小时更新第 1 组
+    setInterval(() => {
+      safeRunStrengthMatrix("scheduled", GROUP1_CURRENCIES).catch(console.error);
+    }, STRENGTH_MATRIX_INTERVAL_MS);
+  }, delayToFirstEven);
+
+  // 第二次更新：第 2 组（奇数小时，比第 1 组晕 2 小时）
+  setTimeout(() => {
+    safeRunStrengthMatrix("scheduled", GROUP2_CURRENCIES).catch(console.error);
+    // 之后每 4 小时更新第 2 组
+    setInterval(() => {
+      safeRunStrengthMatrix("scheduled", GROUP2_CURRENCIES).catch(console.error);
+    }, STRENGTH_MATRIX_INTERVAL_MS);
+  }, delayToFirstEven + 2 * 60 * 60 * 1000);
 }
 
 export function stopCronJobs() {
@@ -128,16 +167,17 @@ async function safeRunUpdate(trigger: string) {
 }
 
 /** 安全运行货币强弱矩阵生成（带防并发保护） */
-export async function safeRunStrengthMatrix(trigger: string) {
+export async function safeRunStrengthMatrix(trigger: string, currencyGroup?: string[]) {
   if (isStrengthRunning) {
     console.log(`[StrengthMatrix] Already running, skipping ${trigger}`);
     return;
   }
   isStrengthRunning = true;
-  console.log(`[StrengthMatrix] Generating G8 currency strength matrix (trigger: ${trigger})...`);
+  const groupLabel = currencyGroup ? `(${currencyGroup.join(", ")})` : "(all 8 currencies)";
+  console.log(`[StrengthMatrix] Generating currency strength matrix ${groupLabel} (trigger: ${trigger})...`);
   try {
     const [matrix, economicData] = await Promise.all([
-      generateCurrencyStrengthMatrix(),
+      generateCurrencyStrengthMatrix(currencyGroup),
       fetchAllCountriesEconomicData(),
     ]);
     const summaries = await generateEconomicSummaries(economicData);

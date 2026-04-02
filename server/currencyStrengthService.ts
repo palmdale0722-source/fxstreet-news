@@ -108,14 +108,15 @@ function buildCurrencyStrengthPrompt(
   economicData: CountryEconomicData[],
   centralBankNews: CentralBankNewsItem[],
   fxstreetNews: string,
-  analysisArticles: string
+  analysisArticles: string,
+  currencyGroup?: string[] // 可选：指定要评分的货币列表
 ): string {
   const economicDataText = formatEconomicDataForPrompt(economicData);
   const centralBankText = formatCentralBankNewsForPrompt(centralBankNews);
 
   return `你是一位专业的外汇基本面分析师，精通《外汇交易三部曲》中的"逻辑层次分析矩阵"方法。
 
-请基于以下多源数据，对 G8 货币（USD, EUR, JPY, GBP, AUD, NZD, CAD, CHF）进行实时驱动力建模评分。
+请基于以下多源数据，对以下货币进行实时驱动力建模评分：${currencyGroup ? currencyGroup.join(", ") : "USD, EUR, JPY, GBP, AUD, NZD, CAD, CHF"}。
 
 ## 数据源
 
@@ -199,7 +200,7 @@ ${analysisArticles}
 
 注意：
 1. 所有 score 字段必须是 -3 到 +3 之间的数字（可以有小数，如 1.5, -2.0）
-2. 必须包含全部 8 个货币：USD, EUR, JPY, GBP, AUD, NZD, CAD, CHF
+2. 必须包含指定的所有货币${currencyGroup ? "（" + currencyGroup.join(", ") + "）" : "（USD, EUR, JPY, GBP, AUD, NZD, CAD, CHF）"}
 3. 所有文字内容使用中文
 4. 严格基于提供的数据进行分析，不要凭空捏造`;
 }
@@ -426,7 +427,7 @@ function parsePicksResponse(content: string, scores: CurrencyStrengthScore[]): A
 
 // ─── 主函数：生成完整货币强弱矩阵 ────────────────────────────────────────────
 
-export async function generateCurrencyStrengthMatrix(): Promise<CurrencyStrengthMatrix> {
+export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): Promise<CurrencyStrengthMatrix> {
   console.log("[CurrencyStrength] Starting matrix generation...");
 
   // 1. 使用 Manus 内置 LLM API
@@ -452,9 +453,12 @@ export async function generateCurrencyStrengthMatrix(): Promise<CurrencyStrength
 
   console.log(`[CurrencyStrength] Data fetched: ${economicData.length} countries, ${centralBankNews.length} CB news, ${recentNews.length} FX news`);
 
-  // 3. AI 生成货币强弱评分
+  // 3. AI 生成货币强弱评分（支持分组）
   console.log("[CurrencyStrength] Generating currency strength scores...");
-  const scorePrompt = buildCurrencyStrengthPrompt(economicData, centralBankNews, fxstreetNewsText, analysisText);
+  if (currencyGroup) {
+    console.log(`[CurrencyStrength] Evaluating currency group: ${currencyGroup.join(", ")}`);
+  }
+  const scorePrompt = buildCurrencyStrengthPrompt(economicData, centralBankNews, fxstreetNewsText, analysisText, currencyGroup);
 
   let scores: CurrencyStrengthScore[] = [];
   try {

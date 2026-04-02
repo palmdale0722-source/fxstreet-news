@@ -195,3 +195,13 @@
 - [x] 修改 generateEconomicSummaries 使用 Manus 内置 LLM API
 - [x] 删除不再使用的 callUserLLM 和 normalizeApiUrl 函数
 - [x] 测试验证：货币强弱矩阵和刺客精选成功生成
+
+
+## G8 货币强弱矩阵分组评分优化
+- [x] 修改 currencyStrengthService 支持分组评分（按货币列表参数）
+- [x] 实现两组评分：第 1 组（USD/EUR/JPY/GBP）、第 2 组（AUD/NZD/CAD/CHF）
+- [x] 更新 cronJobs 配置为每 4 小时更新一次
+- [x] 错开更新时间：第 1 组在偶数小时（0、4、8、12、16、20），第 2 组在奇数小时（2、6、10、14、18、22）
+- [x] 测试分组评分功能
+- [x] 测试定时更新機制
+- [x] 验证刘客精选正确合并两组数据
