@@ -611,9 +611,45 @@ function CurrencyDetailCard({ score }: { score: any }) {
 // ─── G8 货币强弱矩阵主板块 ───────────────────────────────────────────────────
 
 function CurrencyStrengthSection() {
-  const { data: strengthData, isLoading } = trpc.currencyStrength.getMatrix.useQuery(undefined, {
+  const { data: strengthData, isLoading, refetch } = trpc.currencyStrength.getMatrix.useQuery(undefined, {
     refetchInterval: 5 * 60 * 1000, // 每5分钟检查一次
   });
+  
+  // 三个独立的更新函数
+  const updateDrivers = trpc.currencyStrength.updateDrivers.useMutation();
+  const updatePicks = trpc.currencyStrength.updatePicks.useMutation();
+  const updateRanking = trpc.currencyStrength.updateRanking.useMutation();
+  
+  // 处理更新
+  const handleUpdateDrivers = async () => {
+    try {
+      await updateDrivers.mutateAsync();
+      toast.success("货币驱动力已更新");
+      refetch();
+    } catch (error: any) {
+      toast.error(`更新失败: ${error.message || "未知错误"}`);
+    }
+  };
+  
+  const handleUpdatePicks = async () => {
+    try {
+      await updatePicks.mutateAsync({ drivers: [] });
+      toast.success("刺客精选已更新");
+      refetch();
+    } catch (error: any) {
+      toast.error(`更新失败: ${error.message || "未知错误"}`);
+    }
+  };
+  
+  const handleUpdateRanking = async () => {
+    try {
+      await updateRanking.mutateAsync({ drivers: [] });
+      toast.success("实时强弱排行榜已更新");
+      refetch();
+    } catch (error: any) {
+      toast.error(`更新失败: ${error.message || "未知错误"}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -671,14 +707,35 @@ function CurrencyStrengthSection() {
 
         {/* 热力排行榜 */}
         <div className="glass-card rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.60 0.13 60 / 0.15)", color: "oklch(0.60 0.13 60)" }}>
-              <BarChart2 className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.60 0.13 60 / 0.15)", color: "oklch(0.60 0.13 60)" }}>
+                <BarChart2 className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">实时强弱排行榜</div>
+                <div className="text-xs text-muted-foreground">综合评分 = 顶层×30% + 中层×40% + 底层×30%，范围 -3 到 +3</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-semibold">实时强弱排行榜</div>
-              <div className="text-xs text-muted-foreground">综合评分 = 顶层×30% + 中层×40% + 底层×30%，范围 -3 到 +3</div>
-            </div>
+            <Button
+              onClick={handleUpdateRanking}
+              disabled={updateRanking.isPending}
+              size="sm"
+              variant="outline"
+              className="flex-shrink-0"
+            >
+              {updateRanking.isPending ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  更新中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  更新
+                </>
+              )}
+            </Button>
           </div>
           {scores.length > 0 ? (
             <CurrencyStrengthHeatmap scores={scores} />
@@ -711,15 +768,36 @@ function CurrencyStrengthSection() {
         {/* 各货币详细分析 */}
         {scores.length > 0 && (
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "oklch(0.50 0.10 200 / 0.12)", color: "oklch(0.50 0.10 200)" }}>
-                <Globe className="w-4 h-4" />
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: "oklch(0.50 0.10 200 / 0.12)", color: "oklch(0.50 0.10 200)" }}>
+                  <Globe className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground leading-tight">货币驱动力详情</h2>
+                  <p className="text-xs text-muted-foreground">点击各货币卡片展开逻辑层次拆解与驱动分析三问</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground leading-tight">货币驱动力详情</h2>
-                <p className="text-xs text-muted-foreground">点击各货币卡片展开逻辑层次拆解与驱动分析三问</p>
-              </div>
+              <Button
+                onClick={handleUpdateDrivers}
+                disabled={updateDrivers.isPending}
+                size="sm"
+                variant="outline"
+                className="flex-shrink-0"
+              >
+                {updateDrivers.isPending ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    更新中...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    更新
+                  </>
+                )}
+              </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[...scores].sort((a: any, b: any) => b.compositeScore - a.compositeScore).map((score: any) => (

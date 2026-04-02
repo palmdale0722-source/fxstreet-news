@@ -224,8 +224,8 @@
 
 ## 货币强弱矩阵分离更新（减少 prompt 大小）
 - [x] 后端：分离 updateCurrencyDrivers 函数（货币驱动力详情）
-- [x] 后端：分离 updateAssassinPicks 函数（刘客精选）
+- [x] 后端：分离 updateAssassinPicks 函数（刺客精选）
 - [x] 后端：分离 updateStrengthRanking 函数（实时强弱排行檜）
 - [x] 后端：添加三个 tRPC 接口
-- [ ] 前端：在 UI 中添加三个独立的更新按颁
-- [ ] 测试三个部分的独立更新功能
+- [x] 前端：在 UI 中添加三个独立的更新按颁
+- [x] 测试三个部分的独立更新功能
