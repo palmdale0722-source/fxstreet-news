@@ -19,7 +19,7 @@ import {
   type CountryEconomicData,
   type CentralBankNewsItem,
 } from "./dataScraperService";
-import { getRecentNews, getAnalysisArticles } from "./db";
+import { getRecentNews, getAnalysisArticles, getAllUsersWithApiConfig } from "./db";
 
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
 
@@ -462,15 +462,8 @@ export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): 
 
   let scores: CurrencyStrengthScore[] = [];
   try {
-    const scoreResponse = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出，不要有任何多余文字。",
-        },
-        { role: "user", content: scorePrompt },
-      ],
-    });
+    // 使用用户自选 API
+    const scoreResponse = await callUserLLM(scorePrompt, "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出，不要有任何多余文字。");
     const responseText = typeof scoreResponse.choices?.[0]?.message?.content === 'string' 
       ? scoreResponse.choices[0].message.content 
       : "";
@@ -486,15 +479,8 @@ export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): 
   let picks: AssassinPick[] = [];
   try {
     const picksPrompt = buildAssassinPicksPrompt(scores, economicData, centralBankNews);
-    const picksResponse = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: "你是专业外汇基本面分析师，精通刺客原则——只狙击强弱差最大的货币对。请严格按照 JSON 格式输出，不要有任何多余文字。",
-        },
-        { role: "user", content: picksPrompt },
-      ],
-    });
+    // 使用用户自选 API
+    const picksResponse = await callUserLLM(picksPrompt, "你是专业外汇基本面分析师，精通刘客原则——只狙击强弱差最大的货币寸。请严格按照 JSON 格式输出，不要有任何多余文字。");
     const responseText = typeof picksResponse.choices?.[0]?.message?.content === 'string' 
       ? picksResponse.choices[0].message.content 
       : "";
@@ -561,12 +547,8 @@ ${dataText}
 3. 严格基于提供的数据进行分析`;
 
   try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "你是专业宏观经济分析师，输出严格的JSON格式，不要有任何多余文字。" },
-        { role: "user", content: prompt },
-      ],
-    });
+    // 使用用户自选 API
+    const response = await callUserLLM(prompt, "你是专业宏观经济分析师，输出严格的JSON格式，不要有任何多余文字。");
 
     const responseText = typeof response.choices?.[0]?.message?.content === 'string' 
       ? response.choices[0].message.content 
@@ -591,4 +573,59 @@ ${dataText}
     console.error("[CurrencyStrength] Economic summaries generation failed:", e);
     throw e;
   }
+}
+
+// ─── 用户自选 API 调用函数 ────────────────────────────────────────────────────
+
+async function callUserLLM(userPrompt: string, systemPrompt: string): Promise<any> {
+  try {
+    // 获取第一个用户的 API 配置
+    const users = await getAllUsersWithApiConfig();
+    if (!users || users.length === 0) {
+      throw new Error("未找到用户 AI API 配置，请先在 AI 分析师页面配置 API");
+    }
+
+    const userConfig = users[0];
+    const apiUrl = normalizeApiUrl(userConfig.apiUrl);
+    const apiKey = userConfig.apiKey;
+    const model = userConfig.model;
+
+    console.log(`[CurrencyStrength] Using user API: ${apiUrl}, model: ${model}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const response = await fetch(`${apiUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    console.error("[CurrencyStrength] User API call failed:", e);
+    throw e;
+  }
+}
+
+function normalizeApiUrl(url: string): string {
+  return url.replace(/\/$/, "");
 }

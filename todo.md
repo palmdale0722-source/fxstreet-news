@@ -205,3 +205,11 @@
 - [x] 测试分组评分功能
 - [x] 测试定时更新機制
 - [x] 验证刘客精选正确合并两组数据
+
+
+## API 切换：从 Manus 内置改回用户自选
+- [x] 恢复 currencyStrengthService 使用 callUserLLM（用户自选 API）
+- [x] 恢复 generateEconomicSummaries 使用用户自选 API
+- [x] 恢复 刘客精选使用用户自选 API
+- [x] 测试 API 切换功能
+- [x] 验证分组评分和用户 API 兼容性
