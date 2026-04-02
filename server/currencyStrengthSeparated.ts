@@ -7,6 +7,7 @@
  * 3. updateStrengthRanking - 实时强弱排行榜（简化版排名）
  */
 
+import { invokeLLM } from "./_core/llm";
 import { callUserLLM, type CurrencyStrengthScore } from "./currencyStrengthService";
 import {
   fetchAllCountriesEconomicData,
@@ -50,10 +51,13 @@ export async function updateCurrencyDrivers(currencyGroup?: string[]): Promise<C
   );
 
   try {
-    const response = await callUserLLM(
-      prompt,
-      "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出货币强弱评分，不要有任何多余文字。"
-    );
+    // 使用 Manus 自带 LLM API
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出货币强弱评分，不要有任何多余文字。" },
+        { role: "user", content: prompt }
+      ]
+    });
 
     const responseText = typeof response.choices?.[0]?.message?.content === 'string'
       ? response.choices[0].message.content

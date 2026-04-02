@@ -723,12 +723,34 @@ function CurrencyStrengthSection() {
             title="G8 货币强弱矩阵"
             subtitle={`逻辑层次分析矩阵 · ${generatedAt ? `更新于 ${timeAgo(generatedAt)}` : "AI 驱动力建模"}`}
           />
-          {generatedAt && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              数据有效
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {generatedAt && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                数据有效
+              </div>
+            )}
+            <Button
+              onClick={handleUpdateAll}
+              disabled={updateDrivers.isPending || updatePicks.isPending || updateRanking.isPending}
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              style={{ borderColor: "oklch(0.60 0.13 60 / 0.5)", color: "oklch(0.60 0.13 60)" }}
+            >
+              {updateDrivers.isPending || updatePicks.isPending || updateRanking.isPending ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  刷新中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  一键刷新
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* 热力排行榜 */}

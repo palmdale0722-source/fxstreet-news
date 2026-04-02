@@ -15,11 +15,10 @@ let isImapRunning = false;
 let isStrengthRunning = false;
 
 // 每 4 小时执行一次货币强弱矩阵更新
-const STRENGTH_MATRIX_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const STRENGTH_MATRIX_INTERVAL_MS = 24 * 60 * 60 * 1000;
 // 第 1 组（USD/EUR/JPY/GBP）在偶数小时（0、4、8、12、16、20）
-const GROUP1_CURRENCIES = ["USD", "EUR", "JPY", "GBP"];
+const ALL_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "AUD", "NZD", "CAD", "CHF"];
 // 第 2 组（AUD/NZD/CAD/CHF）在奇数小时（2、6、10、14、18、22）
-const GROUP2_CURRENCIES = ["AUD", "NZD", "CAD", "CHF"];
 // 每小时执行一次其他更新任务
 const CRON_INTERVAL_MS = 60 * 60 * 1000;
 // 每 5 分钟拉取一次邮件
@@ -38,38 +37,35 @@ export function startCronJobs() {
     await safeRunUpdate("scheduled");
   }, CRON_INTERVAL_MS);
 
-  // 启动分组货币强弱矩阵更新（每 4 小时）
-  startGroupedStrengthMatrixUpdates();
+  // 启动货币强弱矩阵更新（每天一次）
+  startDailyStrengthMatrixUpdates();
 }
 
-// 启动分组货币强弱矩阵定时更新
-function startGroupedStrengthMatrixUpdates() {
-  console.log("[StrengthMatrix] Starting grouped updates (every 4 hours)");
+// 启动每天货币强弱矩阵更新（每天上午 8 点）
+function startDailyStrengthMatrixUpdates() {
+  console.log("[StrengthMatrix] Starting daily updates (every 24 hours at 08:00)");
 
-  // 计算距离下一个偶数小时的延迟
+  // 计算距离下一个上午 8 点的延迟
   const now = new Date();
-  const currentHour = now.getHours();
-  const nextEvenHour = currentHour % 2 === 0 ? currentHour : currentHour + 1;
-  const minutesUntilNextEven = (nextEvenHour - currentHour) * 60 - now.getMinutes();
-  const delayToFirstEven = Math.max(0, minutesUntilNextEven * 60 * 1000);
+  const nextRun = new Date(now);
+  nextRun.setHours(8, 0, 0, 0);
+  
+  // 如果已经超过今天的 8 点，改为明天 8 点
+  if (nextRun <= now) {
+    nextRun.setDate(nextRun.getDate() + 1);
+  }
+  
+  const delayToFirstRun = nextRun.getTime() - now.getTime();
+  console.log(`[StrengthMatrix] Next update in ${Math.round(delayToFirstRun / 1000 / 60)} minutes`);
 
-  // 第一次更新：第 1 组（偶数小时）
+  // 第一次更新
   setTimeout(() => {
-    safeRunStrengthMatrix("scheduled", GROUP1_CURRENCIES).catch(console.error);
-    // 之后每 4 小时更新第 1 组
+    safeRunStrengthMatrix("scheduled", ALL_CURRENCIES).catch(console.error);
+    // 之后每 24 小时更新
     setInterval(() => {
-      safeRunStrengthMatrix("scheduled", GROUP1_CURRENCIES).catch(console.error);
+      safeRunStrengthMatrix("scheduled", ALL_CURRENCIES).catch(console.error);
     }, STRENGTH_MATRIX_INTERVAL_MS);
-  }, delayToFirstEven);
-
-  // 第二次更新：第 2 组（奇数小时，比第 1 组晕 2 小时）
-  setTimeout(() => {
-    safeRunStrengthMatrix("scheduled", GROUP2_CURRENCIES).catch(console.error);
-    // 之后每 4 小时更新第 2 组
-    setInterval(() => {
-      safeRunStrengthMatrix("scheduled", GROUP2_CURRENCIES).catch(console.error);
-    }, STRENGTH_MATRIX_INTERVAL_MS);
-  }, delayToFirstEven + 2 * 60 * 60 * 1000);
+  }, delayToFirstRun);
 }
 
 export function stopCronJobs() {

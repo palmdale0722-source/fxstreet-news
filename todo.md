@@ -234,4 +234,11 @@
 - [x] 后端：在 currencyStrengthService.ts 中添加数据合并逻辑
 - [x] 后端：在 currencyStrengthSeparated.ts 中添加数据合并逻辑
 - [x] 前端：修改更新流程以确保先更新驱动力，再更新刺客精选和排行榜
-- [ ] 测试修复效果（需要验证所有 8 个货币都能正常显示）
+- [x] 测试修复效果（需要验证所有 8 个货币都能正常显示）
+
+## 一键刷新按钮和 LLM API 优化
+- [x] 前端：在货币强弱矩阵添加一键刷新按钮
+- [x] 后端：切换 currencyStrengthService.ts 使用 Manus 自带 LLM API
+- [x] 后端：切换 currencyStrengthSeparated.ts 使用 Manus 自带 LLM API
+- [x] 后端：修改 cronJobs.ts 中的定时任务频率为每日一次
+- [ ] 测试一键刷新功能和每日更新机制

@@ -462,8 +462,13 @@ export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): 
 
   let scores: CurrencyStrengthScore[] = [];
   try {
-    // 使用用户自选 API
-    const scoreResponse = await callUserLLM(scorePrompt, "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出，不要有任何多余文字。");
+    // 使用 Manus 自带 LLM API
+    const scoreResponse = await invokeLLM({
+      messages: [
+        { role: "system", content: "你是专业外汇基本面分析师，精通《外汇交易三部曲》的逻辑层次分析矩阵方法。请严格按照 JSON 格式输出，不要有任何多余文字。" },
+        { role: "user", content: scorePrompt }
+      ]
+    });
     const responseText = typeof scoreResponse.choices?.[0]?.message?.content === 'string' 
       ? scoreResponse.choices[0].message.content 
       : "";
@@ -504,8 +509,13 @@ export async function generateCurrencyStrengthMatrix(currencyGroup?: string[]): 
   let picks: AssassinPick[] = [];
   try {
     const picksPrompt = buildAssassinPicksPrompt(scores, economicData, centralBankNews);
-    // 使用用户自选 API
-    const picksResponse = await callUserLLM(picksPrompt, "你是专业外汇基本面分析师，精通刘客原则——只狙击强弱差最大的货币寸。请严格按照 JSON 格式输出，不要有任何多余文字。");
+    // 使用 Manus 自带 LLM API
+    const picksResponse = await invokeLLM({
+      messages: [
+        { role: "system", content: "你是专业外汇基本面分析师，精通刘客原则——只狙击强弱差最大的货币寸。请严格按照 JSON 格式输出，不要有任何多余文字。" },
+        { role: "user", content: picksPrompt }
+      ]
+    });
     const responseText = typeof picksResponse.choices?.[0]?.message?.content === 'string' 
       ? picksResponse.choices[0].message.content 
       : "";
