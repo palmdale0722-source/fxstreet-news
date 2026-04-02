@@ -1055,6 +1055,56 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       safeRunStrengthMatrix("manual-trpc").catch(console.error);
       return { success: true, message: "货币强弱矩阵生成已触发，请稍后刷新查看结果" };
     }),
+
+    // 更新货币驱动力详情（分离更新）
+    updateDrivers: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可更新货币驱动力" });
+      }
+      try {
+        const { updateCurrencyDrivers } = await import("./currencyStrengthSeparated");
+        const drivers = await updateCurrencyDrivers();
+        return { success: true, message: "货币驱动力已更新", data: drivers };
+      } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `更新失败：${errorMsg}` });
+      }
+    }),
+
+    // 更新刺客精选（分离更新）
+    updatePicks: protectedProcedure
+      .input(z.object({ drivers: z.any() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可更新刺客精选" });
+        }
+        try {
+          const { updateAssassinPicks } = await import("./currencyStrengthSeparated");
+          const picks = await updateAssassinPicks(input.drivers);
+          return { success: true, message: "刺客精选已更新", data: picks };
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `更新失败：${errorMsg}` });
+        }
+      }),
+
+    // 更新强弱排行榜（分离更新）
+    updateRanking: protectedProcedure
+      .input(z.object({ drivers: z.any() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "仅管理员可更新强弱排行榜" });
+        }
+        try {
+          const { updateStrengthRanking } = await import("./currencyStrengthSeparated");
+          const ranking = await updateStrengthRanking(input.drivers);
+          return { success: true, message: "强弱排行榜已更新", data: ranking };
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `更新失败：${errorMsg}` });
+        }
+      }),
+
   }),
 
   // ─── 历史对话记录路由 ──────────────────────────────────────────────

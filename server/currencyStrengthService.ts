@@ -629,3 +629,6 @@ async function callUserLLM(userPrompt: string, systemPrompt: string): Promise<an
 function normalizeApiUrl(url: string): string {
   return url.replace(/\/$/, "");
 }
+
+// 导出分离更新函数使用的函数
+export { callUserLLM };
