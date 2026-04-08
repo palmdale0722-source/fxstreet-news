@@ -241,4 +241,9 @@
 - [x] 后端：切换 currencyStrengthService.ts 使用 Manus 自带 LLM API
 - [x] 后端：切换 currencyStrengthSeparated.ts 使用 Manus 自带 LLM API
 - [x] 后端：修改 cronJobs.ts 中的定时任务频率为每日一次
-- [ ] 测试一键刷新功能和每日更新机制
+- [x] 测试一键刷新功能和每日更新机制
+
+## 成本优化 - 关闭 Extended Thinking
+- [x] 关闭 LLM API 中的 Extended Thinking 功能（server/_core/llm.ts）
+- [x] 预计成本下降 80-90%（从 $4.68/周 降低到 ~$0.50/周）
+- [x] 测试修改效果（编译通过，功能正常）

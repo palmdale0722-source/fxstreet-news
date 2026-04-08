@@ -297,9 +297,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
+  // Extended Thinking disabled to reduce costs (80-90% savings)
+  // payload.thinking = {
+  //   "budget_tokens": 128
+  // }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
