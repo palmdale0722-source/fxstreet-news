@@ -247,3 +247,10 @@
 - [x] 关闭 LLM API 中的 Extended Thinking 功能（server/_core/llm.ts）
 - [x] 预计成本下降 80-90%（从 $4.68/周 降低到 ~$0.50/周）
 - [x] 测试修改效果（编译通过，功能正常）
+
+
+## MT4 传输数据错误修复
+- [x] 检查 MT4 EA 代码中的请求配置（URL、API 密钥、请求头）
+- [x] 检查后端 /api/mt4/tw 接口实现
+- [x] 排查 CORS 和认证问题 - 找到根本原因：AT4_API_KEY 不匹配
+- [x] 修复并测试 MT4 数据传输 - 设置 MT4_API_KEY = mt4-bridge-key-change-me，测试成功
