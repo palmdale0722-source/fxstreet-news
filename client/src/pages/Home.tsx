@@ -711,7 +711,7 @@ function CurrencyStrengthSection() {
   const { matrix, economicSummaries } = strengthData;
   const scores: any[] = matrix.scores || [];
   const picks: any[] = matrix.picks || [];
-  const generatedAt = strengthData.generatedAt ? new Date(strengthData.generatedAt) : null;
+  const generatedAt = matrix.generatedAt ? new Date(matrix.generatedAt) : null;
 
   return (
     <section className="py-10">

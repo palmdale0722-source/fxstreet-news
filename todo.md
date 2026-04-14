@@ -254,3 +254,14 @@
 - [x] 检查后端 /api/mt4/tw 接口实现
 - [x] 排查 CORS 和认证问题 - 找到根本原因：AT4_API_KEY 不匹配
 - [x] 修复并测试 MT4 数据传输 - 设置 MT4_API_KEY = mt4-bridge-key-change-me，测试成功
+
+
+## 排行榜更新时间显示和自动监控
+- [ ] 数据库：添加更新时间戳到 currencyStrengthCache 表
+- [ ] 后端：修改 safeRunStrengthMatrix 记录更新时间
+- [ ] 后端：添加 getLastUpdateTime API 接口
+- [ ] 前端：在排行榜上显示最后更新时间
+- [ ] 前端：添加更新状态指示器（更新中/已完成）
+- [ ] 前端：添加自动检查更新状态的机制（每 5 分钟检查一次）
+- [ ] 前端：添加手动刷新按钮
+- [ ] 测试完整功能
