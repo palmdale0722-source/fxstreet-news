@@ -84,7 +84,7 @@ export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: 
                 close: bar.close,
                 volume: bar.volume || "0",
                 spread: bar.spread || 0,
-                pushedAt: new Date(),
+                pushedAt: new Date().toISOString(),
               },
             });
           inserted++;
@@ -108,14 +108,14 @@ export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: 
           accountNumber: payload.accountNumber || null,
           broker: payload.broker || null,
           symbolsCount: symbols.length,
-          lastPushedAt: new Date(),
+          lastPushedAt: new Date().toISOString(),
         })
         .onDuplicateKeyUpdate({
           set: {
             accountNumber: payload.accountNumber || null,
             broker: payload.broker || null,
             symbolsCount: symbols.length,
-            lastPushedAt: new Date(),
+            lastPushedAt: new Date().toISOString(),
           },
         });
     } catch (error) {

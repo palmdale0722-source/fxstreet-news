@@ -989,13 +989,11 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       }
       const nodemailer = await import("nodemailer");
       const transporter = nodemailer.default.createTransport({
-        host: config.smtpHost,
+        host: config.smtpHost || 'smtp.163.com',
         port: config.smtpPort ?? 465,
         secure: config.smtpSecure ?? true,
         auth: { user: config.smtpUser, pass: config.smtpPass },
-        connectionTimeout: 10000,
-        socketTimeout: 15000,
-      });
+      } as any); // TODO: 使用正式的 nodemailer 类型
       await transporter.sendMail({
         from: `"FX 信号助手" <${config.smtpUser}>`,
         to: config.toEmail,

@@ -8,7 +8,7 @@
  * Manus 内部通知由 signalAnalyzer / tvIdeaAnalyzer 直接调用 notifyOwner()。
  */
 import nodemailer from "nodemailer";
-import type { Signal, TvIdea } from "../drizzle/schema";
+// import type { Signal, TvIdea } from "../drizzle/schema"; // 类型不存在
 
 // ─── 固定配置 ─────────────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ function getSmtpConfig() {
 // ─── 类型定义 ─────────────────────────────────────────────────────────────────
 
 export interface SignalNotifyPayload {
-  signal: Signal;
+  signal: { id: number; subject: string; fromEmail?: string; receivedAt?: string }; // TODO: 使用正式的 signals 类型
   decision: "execute" | "watch";
   confidence: number;
   summary: string;
@@ -46,7 +46,7 @@ export interface SignalNotifyPayload {
 }
 
 export interface TvIdeaNotifyPayload {
-  idea: TvIdea;
+  idea: { id: number; title: string; link: string; author?: string; pair?: string; symbol?: string; publishedAt?: string | Date }; // TODO: 使用正式的 tvIdeas 类型
   decision: "execute" | "watch";
   confidence: number;
   summary: string;
@@ -63,7 +63,7 @@ function buildEmailHtml(payload: SignalNotifyPayload): string {
   const decisionColor = decision === "execute" ? "#16a34a" : "#d97706";
   const decisionBg = decision === "execute" ? "#f0fdf4" : "#fffbeb";
   const decisionBorder = decision === "execute" ? "#86efac" : "#fde68a";
-  const receivedTime = signal.receivedAt.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const receivedTime = String(signal.receivedAt || '').replace("T", " ").slice(0, 19) + " UTC";
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -110,7 +110,7 @@ function buildTvIdeaEmailHtml(payload: TvIdeaNotifyPayload): string {
   const decisionBg = decision === "execute" ? "#f0fdf4" : "#fffbeb";
   const decisionBorder = decision === "execute" ? "#86efac" : "#fde68a";
   const pairLabel = idea.pair || idea.symbol || "未知品种";
-  const publishedTime = idea.publishedAt.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const publishedTime = (typeof idea.publishedAt === 'string' ? idea.publishedAt : idea.publishedAt?.toISOString() || '').replace("T", " ").slice(0, 16) + " UTC";
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
