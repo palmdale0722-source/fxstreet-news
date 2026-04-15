@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { AlertCircle, Copy, RotateCcw, Save } from "lucide-react";
 
 export default function SignalPromptConfig() {
   const [promptContent, setPromptContent] = useState("");
+  const [preferredCurrencies, setPreferredCurrencies] = useState("");
+  const [geopoliticalJudgments, setGeopoliticalJudgments] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [activeTab, setActiveTab] = useState("editor");
@@ -93,8 +95,9 @@ export default function SignalPromptConfig() {
 
         {/* 标签页 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="editor">编辑 Prompt</TabsTrigger>
+            <TabsTrigger value="preferences">偏好设置</TabsTrigger>
             <TabsTrigger value="history">版本历史</TabsTrigger>
           </TabsList>
 

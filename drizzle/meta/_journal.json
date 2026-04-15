@@ -71,6 +71,13 @@
       "when": 1776223665336,
       "tag": "0009_hesitant_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1776253624477,
+      "tag": "0010_create_signal_ai_prompts",
+      "breakpoints": true
     }
   ]
 }

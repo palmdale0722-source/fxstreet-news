@@ -12,7 +12,6 @@ import {
   getNewsContextForAgent,
   getLatestInsightAndOutlooks,
   getActiveTradingSystem,
-  getActiveSignalAiPrompt,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { signals } from "../drizzle/schema";
@@ -72,16 +71,57 @@ async function callUserLLM(
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-// ─── 构建分析 Prompt ──────────────────────────────────────────────────────────
+// // ─── 获取默认的 System Prompt（不含实时数据）────────────────────────────
+export function getDefaultSystemPrompt(): string {
+  return `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
+
+你必须以严格的 JSON 格式返回分析结果，不要包含任何 markdown 代码块，直接输出 JSON 对象：
+{
+  "decision": "execute" | "watch" | "ignore",
+  "confidence": 0-100,
+  "priority": "普通" | "高" | "超高优先级",
+  "summary": "一句话结论（30字以内）",
+  "reasoning": "详细分析推理（200字以内）",
+  "dataFreshness": "新鲜" | "一般" | "过期",
+  "contradiction": "无矛盾" | "轻微矛盾" | "严重矛盾",
+  "marketContext": "当前市场背景简述（100字以内）",
+  "riskWarning": "主要风险提示（100字以内，如无风险可为空字符串）"
+}
+
+决策标准：
+- execute（建议执行）：信号方向与市场趋势一致，符合用户交易体系，风险可控
+- watch（建议观察）：信号有一定价值但存在不确定因素，建议等待更好入场时机
+- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高
+
+【数据新鲜度检查】
+- 如果市场背景信息超过 1 小时未更新，标记为"过期"，置信度 -20
+- 如果 1-2 小时内更新，标记为"一般"，置信度 -10
+- 如果 1 小时内更新，标记为"新鲜"，无置信度调整
+- 在 reasoning 中说明数据新鲜度对分析的影响
+
+【矛盾检测】
+- 检查信号方向是否与市场背景一致
+- 如果存在矛盾，在 reasoning 中明确说明，不要编造解释
+- 严重矛盾时，倾向于选择 "watch" 而非 "ignore"
+- 轻微矛盾时，可以选择 "execute" 但要降低置信度 10-15 分
+
+【偏好匹配】
+- 当信号涉及用户优先关注的货币或地缘政治事件时，标记为"超高优先级"
+- 在 reasoning 中说明匹配的偏好项
+- 优先级为"超高"时，可以适度提高置信度（+10-15 分）
+
+注意：实时的市场洞察、货币展望、新闻摘要和用户交易体系会在每次分析时动态注入到此 Prompt 之后。`;
+}
+
+// ─── 构建分析 Prompt ──────────────────────────────────────────────────────
 async function buildAnalysisPrompt(
   signal: typeof signals.$inferSelect,
   userId: number
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
-  // 并行获取市场上下文、用户交易体系和自定义 Prompt
-  const [newsCtx, { insight, outlooks }, customPrompt, tradingSystemItems] = await Promise.all([
+  // 并行获取市场上下文和用户交易体系
+  const [newsCtx, { insight, outlooks }, tradingSystemItems] = await Promise.all([
     getNewsContextForAgent(10),
     getLatestInsightAndOutlooks(),
-    getActiveSignalAiPrompt(userId),
     getActiveTradingSystem(userId),
   ]);
 
@@ -102,9 +142,8 @@ async function buildAnalysisPrompt(
   const tradingSystemSection = tradingSystemItems.length > 0
     ? `【用户交易体系与规则】\n${tradingSystemItems.map((item: { category: string; title: string; content: string }) => `[${item.category}] ${item.title}: ${item.content}`).join("\n")}`
     : "";
-  // 使用自定义 Prompt 或默认 Prompt
-  const basePrompt = customPrompt?.systemPrompt || getDefaultSystemPrompt();
-  const systemPrompt = `${basePrompt}
+
+  const systemPrompt = `${getDefaultSystemPrompt()}
 
 ${marketSection}
 
@@ -278,25 +317,4 @@ export async function analyzeUnprocessedSignals(pendingSignals: (typeof signals.
     // 每条信号分析后等待 1 秒，避免 API 限速
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
-}
-
-
-// ─── 默认 System Prompt ────────────────────────────────────────────────────────
-function getDefaultSystemPrompt(): string {
-  return `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
-
-你必须以严格的 JSON 格式返回分析结果，不要包含任何 markdown 代码块，直接输出 JSON 对象：
-{
-  "decision": "execute" | "watch" | "ignore",
-  "confidence": 0-100,
-  "summary": "一句话结论（30字以内）",
-  "reasoning": "详细分析推理（200字以内）",
-  "marketContext": "当前市场背景简述（100字以内）",
-  "riskWarning": "主要风险提示（100字以内，如无风险可为空字符串）"
-}
-
-决策标准：
-- execute（建议执行）：信号方向与市场趋势一致，符合用户交易体系，风险可控
-- watch（建议观察）：信号有一定价值但存在不确定因素，建议等待更好入场时机
-- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高`;
 }
