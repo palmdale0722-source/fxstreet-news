@@ -14,7 +14,7 @@ import {
   getActiveTradingSystem,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
-import type { Signal } from "../drizzle/schema";
+import { signals } from "../drizzle/schema";
 
 // ─── 规范化 API URL ────────────────────────────────────────────────────────────
 function normalizeApiUrl(url: string): string {
@@ -73,7 +73,7 @@ async function callUserLLM(
 
 // ─── 构建分析 Prompt ──────────────────────────────────────────────────────────
 async function buildAnalysisPrompt(
-  signal: Signal,
+  signal: typeof signals.$inferSelect,
   userId: number
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
   // 并行获取市场上下文和用户交易体系
@@ -130,7 +130,7 @@ ${tradingSystemSection}`;
 
 发件人：${signal.fromEmail || "未知"}
 主题：${signal.subject}
-接收时间：${signal.receivedAt.toISOString()}
+接收时间：${signal.receivedAt}
 
 邮件正文：
 ${signal.body.slice(0, 2000)}
@@ -173,7 +173,7 @@ function parseAnalysisResult(raw: string): {
 }
 
 // ─── 主函数：分析单条信号 ──────────────────────────────────────────────────────
-export async function analyzeSignal(signal: Signal): Promise<void> {
+export async function analyzeSignal(signal: typeof signals.$inferSelect): Promise<void> {
   // 获取所有已配置 API 的用户
   const usersWithConfig = await getAllUsersWithApiConfig();
   if (usersWithConfig.length === 0) {
@@ -242,7 +242,7 @@ export async function analyzeSignal(signal: Signal): Promise<void> {
 
 // ─── 发送通知（仅 Manus 内部通知）────────────────────────────────────────────
 async function sendSignalNotification(
-  signal: Signal,
+  signal: typeof signals.$inferSelect,
   analysis: {
     decision: "execute" | "watch" | "ignore";
     confidence: number;
@@ -264,7 +264,7 @@ async function sendSignalNotification(
     analysis.riskWarning ? `\n⚠️ 风险提示：${analysis.riskWarning}` : "",
     ``,
     `📧 信号来源：${signal.fromEmail || "未知"}`,
-    `📅 接收时间：${signal.receivedAt.toISOString().replace("T", " ").slice(0, 19)} UTC`,
+    `📅 接收时间：${String(signal.receivedAt).replace("T", " ").slice(0, 19)} UTC`,
   ].filter(Boolean).join("\n");
 
   try {
@@ -282,7 +282,7 @@ async function sendSignalNotification(
 
 // ─── 批量分析待处理信号 ────────────────────────────────────────────────────────
 // 用于启动时补分析已入库但未分析的信号
-export async function analyzeUnprocessedSignals(pendingSignals: Signal[]): Promise<void> {
+export async function analyzeUnprocessedSignals(pendingSignals: (typeof signals.$inferSelect)[]): Promise<void> {
   if (pendingSignals.length === 0) return;
   console.log(`[SignalAnalyzer] Processing ${pendingSignals.length} unanalyzed signals`);
   for (const signal of pendingSignals) {

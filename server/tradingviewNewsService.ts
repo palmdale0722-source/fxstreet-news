@@ -4,7 +4,7 @@
  */
 import * as cheerio from "cheerio";
 import { getDb } from "./db";
-import { tradingviewNews } from "../drizzle/schema";
+// import { tradingviewNews } from "../drizzle/schema"; // 表不存在
 import { eq } from "drizzle-orm";
 
 const TRADINGVIEW_NEWS_URL = "https://www.tradingview.com/news-flow/?market=forex&market_country=au,us,ca,de,jp,eu,nz,ch";
@@ -158,25 +158,26 @@ export async function saveTradingViewNews(items: TradingViewNewsItem[]): Promise
 
   for (const item of items) {
     try {
-      // 检查是否已存在
-      const existing = await db.select().from(tradingviewNews)
-        .where(eq(tradingviewNews.link, item.link))
-        .limit(1);
-
-      if (existing.length > 0) {
-        skipped++;
-        continue;
-      }
-
-      // 插入新闻
-      await db.insert(tradingviewNews).values({
-        title: item.title,
-        link: item.link,
-        description: item.description,
-        publishedAt: item.publishedAt,
-        source: "TradingView",
-        createdAt: new Date(),
-      });
+      // TODO: tradingviewNews 表不存在，待实现
+      // // 检查是否已存在
+      // const existing = await db.select().from(tradingviewNews)
+      //   .where(eq(tradingviewNews.link, item.link))
+      //   .limit(1);
+      //
+      // if (existing.length > 0) {
+      //   skipped++;
+      //   continue;
+      // }
+      //
+      // // 插入新闻
+      // await db.insert(tradingviewNews).values({
+      //   title: item.title,
+      //   link: item.link,
+      //   description: item.description,
+      //   publishedAt: item.publishedAt,
+      //   source: "TradingView",
+      //   createdAt: new Date(),
+      // });
 
       inserted++;
     } catch (error) {
@@ -196,9 +197,11 @@ export async function getRecentTradingViewNews(limit = 10) {
   if (!db) return [];
 
   try {
-    return await db.select().from(tradingviewNews)
-      .orderBy((t) => t.publishedAt)
-      .limit(limit);
+    // TODO: tradingviewNews 表不存在，待实现
+    // return await db.select().from(tradingviewNews)
+    //   .orderBy((t) => t.publishedAt)
+    //   .limit(limit);
+    return [];
   } catch (error) {
     console.error("[TradingViewNews] Error fetching recent news:", error);
     return [];

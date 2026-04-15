@@ -15,7 +15,7 @@ import {
   getActiveTradingSystem,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
-import type { TvIdea } from "../drizzle/schema";
+import { tvIdeas } from "../drizzle/schema";
 
 // ─── 规范化 API URL ────────────────────────────────────────────────────────────
 function normalizeApiUrl(url: string): string {
@@ -71,7 +71,7 @@ async function callUserLLM(
 
 // ─── 构建分析 Prompt ──────────────────────────────────────────────────────────
 async function buildIdeaAnalysisPrompt(
-  idea: TvIdea,
+  idea: typeof tvIdeas.$inferSelect,
   userId: number
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
   // 并行获取市场上下文和用户交易体系
@@ -133,7 +133,7 @@ ${tradingSystemSection}`;
 标题：${idea.title}
 ${pairInfo}
 作者：${idea.author || "匿名"}
-发布时间：${idea.publishedAt.toISOString().replace("T", " ").slice(0, 16)} UTC
+发布时间：${String(idea.publishedAt).replace("T", " ").slice(0, 16)} UTC
 文章摘要：${idea.description || "（无摘要）"}
 原文链接：${idea.link}
 
@@ -169,7 +169,7 @@ function parseAnalysisResult(raw: string): {
 }
 
 // ─── 分析单条交易想法 ─────────────────────────────────────────────────────────
-export async function analyzeTvIdea(idea: TvIdea): Promise<void> {
+export async function analyzeTvIdea(idea: typeof tvIdeas.$inferSelect): Promise<void> {
   // 检查是否已分析过
   const existing = await getTvIdeaAnalysis(idea.id);
   if (existing) {
@@ -237,7 +237,7 @@ export async function analyzeTvIdea(idea: TvIdea): Promise<void> {
 
 // ─── 发送通知（仅 Manus 内部通知）────────────────────────────────────────────
 async function sendTvIdeaNotification(
-  idea: TvIdea,
+  idea: typeof tvIdeas.$inferSelect,
   analysis: {
     decision: "execute" | "watch" | "ignore";
     confidence: number;
