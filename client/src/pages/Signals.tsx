@@ -280,7 +280,8 @@ function AiAnalysisSection({ signalId, isLoggedIn }: { signalId: number; isLogge
 
         {/* 分析时间 */}
         <div className="text-xs text-muted-foreground/60 text-right">
-          分析于 {new Date(analysis.analyzedAt).toLocaleString("zh-CN", {
+          分析于 {new Date(typeof analysis.analyzedAt === 'string' && !analysis.analyzedAt.endsWith('Z') ? analysis.analyzedAt + 'Z' : analysis.analyzedAt).toLocaleString("zh-CN", {
+            timeZone: "Asia/Shanghai",
             month: "short", day: "numeric",
             hour: "2-digit", minute: "2-digit"
           })}
@@ -370,7 +371,8 @@ function NotesSection({ signalId, isLoggedIn }: { signalId: number; isLoggedIn: 
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {new Date(note.updatedAt).toLocaleString("zh-CN", {
+                  {new Date(typeof note.updatedAt === 'string' && !note.updatedAt.endsWith('Z') ? note.updatedAt + 'Z' : note.updatedAt).toLocaleString("zh-CN", {
+                    timeZone: "Asia/Shanghai",
                     month: "short", day: "numeric",
                     hour: "2-digit", minute: "2-digit"
                   })}
@@ -427,7 +429,8 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
               )}
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {new Date(signal.receivedAt).toLocaleString("zh-CN", {
+                {new Date(typeof signal.receivedAt === 'string' && !signal.receivedAt.endsWith('Z') ? signal.receivedAt + 'Z' : signal.receivedAt).toLocaleString("zh-CN", {
+                  timeZone: "Asia/Shanghai",
                   month: "short", day: "numeric",
                   hour: "2-digit", minute: "2-digit"
                 })}
@@ -630,7 +633,10 @@ export default function Signals() {
     pageSize: PAGE_SIZE,
   }), [statusFilter, page]);
 
-  const { data, isLoading, refetch } = trpc.signals.list.useQuery(queryInput);
+  const { data, isLoading, refetch } = trpc.signals.list.useQuery(queryInput, {
+    refetchInterval: 30000, // 每 30 秒自动刷新
+    staleTime: 0,           // 始终视为过期，确保切换标签时重新拉取
+  });
 
   const handleFilterChange = (f: SignalStatus | "all") => {
     setStatusFilter(f);
