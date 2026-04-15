@@ -9,12 +9,14 @@ import Signals from "./pages/Signals";
 import Agent from "./pages/Agent";
 import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
+import SignalPromptConfig from "./pages/SignalPromptConfig";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/signals"} component={Signals} />
+      <Route path={"/signals/prompt-config"} component={SignalPromptConfig} />
       <Route path={"/agent"} component={Agent} />
       <Route path={"/ideas"} component={Ideas} />
       <Route path={"/my-system"} component={MySystem} />

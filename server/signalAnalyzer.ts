@@ -12,6 +12,7 @@ import {
   getNewsContextForAgent,
   getLatestInsightAndOutlooks,
   getActiveTradingSystem,
+  getActiveSignalAiPrompt,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import type { Signal } from "../drizzle/schema";
@@ -71,37 +72,60 @@ async function callUserLLM(
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-// ─── 构建分析 Prompt ──────────────────────────────────────────────────────────
+//// ─── 构建分析 Prompt ──────────────────────────────────────────────────────
 async function buildAnalysisPrompt(
-  signal: Signal,
+  signal: any,
   userId: number
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
-  // 并行获取市场上下文和用户交易体系
-  const [newsCtx, { insight, outlooks }, tradingSystemItems] = await Promise.all([
+  // 并行获取市场上下文、用户交易体系和自定义 Prompt
+  const [newsCtx, { insight, outlooks }, tradingSystemItems, customPrompt] = await Promise.all([
     getNewsContextForAgent(10),
     getLatestInsightAndOutlooks(),
     getActiveTradingSystem(userId),
-  ]);
+    getActiveSignalAiPrompt(),
+    ]);
 
-  // 构建市场背景部分
-  const marketSection = insight
-    ? `【今日市场洞察】\n${insight.summary}\n外汇：${insight.forex || "暂无"}\n建议：${insight.tradingAdvice || "暂无"}`
-    : "【今日市场洞察】暂无数据";
+  // 如果有自定义 Prompt，直接使用；否则使用默认 Prompt
+  let systemPrompt = customPrompt?.systemPrompt || getDefaultSystemPrompt();
 
-  const outlookSection = outlooks.length > 0
-    ? `【货币展望】\n${outlooks.slice(0, 6).map((o: { currency: string; sentiment: string; outlook: string }) => `${o.currency}: ${o.sentiment} - ${o.outlook.slice(0, 100)}`).join("\n")}`
-    : "";
+  // 如果使用默认 Prompt，需要注入市场背景信息
+  if (!customPrompt) {
+    const marketSection = insight
+      ? `【今日市场洞察】\n${insight.summary}\n外汇：${insight.forex || "暂无"}\n建议：${insight.tradingAdvice || "暂无"}`
+      : "【今日市场洞察】暂无数据";
 
-  const newsSection = newsCtx
-    ? `【最新新闻摘要】\n${newsCtx.slice(0, 800)}`
-    : "";
+    const outlookSection = outlooks.length > 0
+      ? `【货币展望】\n${outlooks.slice(0, 6).map((o: { currency: string; sentiment: string; outlook: string }) => `${o.currency}: ${o.sentiment} - ${o.outlook.slice(0, 100)}`).join("\n")}`
+      : "";
 
-  // 构建用户交易体系部分
-  const tradingSystemSection = tradingSystemItems.length > 0
-    ? `【用户交易体系与规则】\n${tradingSystemItems.map((item: { category: string; title: string; content: string }) => `[${item.category}] ${item.title}: ${item.content}`).join("\n")}`
-    : "";
+    const newsSection = newsCtx
+      ? `【最新新闻摘要】\n${newsCtx.slice(0, 800)}`
+      : "";
 
-  const systemPrompt = `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
+    const tradingSystemSection = tradingSystemItems.length > 0
+      ? `【用户交易体系与规则】\n${tradingSystemItems.map((item: { category: string; title: string; content: string }) => `[${item.category}] ${item.title}: ${item.content}`).join("\n")}`
+      : "";
+
+    systemPrompt = `${systemPrompt}\n\n${marketSection}\n\n${outlookSection}\n\n${newsSection}\n\n${tradingSystemSection}`;
+  }
+
+  const userPrompt = `请分析以下交易信号邮件：
+
+发件人：${signal.fromEmail || "未知"}
+主题：${signal.subject}
+接收时间：${signal.receivedAt.toISOString()}
+
+邮件正文：
+${signal.body.slice(0, 2000)}
+
+请给出你的交易决策分析。`;
+
+  return { systemPrompt, userPrompt };
+}
+
+// ─── 默认 System Prompt ───────────────────────────────────────────────────────
+function getDefaultSystemPrompt(): string {
+  return `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
 
 你必须以严格的 JSON 格式返回分析结果，不要包含任何 markdown 代码块，直接输出 JSON 对象：
 {
@@ -116,28 +140,7 @@ async function buildAnalysisPrompt(
 决策标准：
 - execute（建议执行）：信号方向与市场趋势一致，符合用户交易体系，风险可控
 - watch（建议观察）：信号有一定价值但存在不确定因素，建议等待更好入场时机
-- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高
-
-${marketSection}
-
-${outlookSection}
-
-${newsSection}
-
-${tradingSystemSection}`;
-
-  const userPrompt = `请分析以下交易信号邮件：
-
-发件人：${signal.fromEmail || "未知"}
-主题：${signal.subject}
-接收时间：${signal.receivedAt.toISOString()}
-
-邮件正文：
-${signal.body.slice(0, 2000)}
-
-请给出你的交易决策分析。`;
-
-  return { systemPrompt, userPrompt };
+- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高`;
 }
 
 // ─── 解析 AI 返回的 JSON ──────────────────────────────────────────────────────

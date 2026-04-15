@@ -52,6 +52,10 @@ import {
   getNotifyConfig,
   saveNotifyConfig,
   type SignalStatus,
+  getActiveSignalAiPrompt,
+  getSignalAiPromptHistory,
+  saveSignalAiPrompt,
+  rollbackSignalAiPrompt,
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
@@ -1158,6 +1162,41 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await deleteTradingConversation(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  // Signal AI Prompt Configuration
+  signalPrompt: router({
+    getCurrent: protectedProcedure.query(async () => {
+      const prompt = await getActiveSignalAiPrompt();
+      return prompt ?? null;
+    }),
+
+    getHistory: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional() }).optional())
+      .query(async ({ input }) => {
+        return getSignalAiPromptHistory(input?.limit ?? 20);
+      }),
+
+    save: protectedProcedure
+      .input(z.object({
+        systemPrompt: z.string().min(10),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await saveSignalAiPrompt({
+          systemPrompt: input.systemPrompt,
+          description: input.description,
+          createdBy: ctx.user.id,
+        });
+        return { success: true };
+      }),
+
+    rollback: protectedProcedure
+      .input(z.object({ version: z.number().min(1) }))
+      .mutation(async ({ input }) => {
+        await rollbackSignalAiPrompt(input.version);
         return { success: true };
       }),
   }),
