@@ -663,7 +663,14 @@ export default function Signals() {
           </div>
           <div className="flex items-center gap-2">
             {isAuthenticated && user?.role === "admin" && (
-              <FetchButton onFetched={() => refetch()} />
+              <>
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs" asChild>
+                  <Link href="/signals/prompt-config">
+                    ⚙️ AI Prompt 配置
+                  </Link>
+                </Button>
+                <FetchButton onFetched={() => refetch()} />
+              </>
             )}
             {!isAuthenticated && (
               <Button size="sm" className="gap-1.5 text-xs" asChild>
@@ -733,6 +740,11 @@ export default function Signals() {
             </p>
             {isAuthenticated && user?.role === "admin" && (
               <div className="mt-4">
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs" asChild>
+                  <Link href="/signals/prompt-config">
+                    ⚙️ AI Prompt 配置
+                  </Link>
+                </Button>
                 <FetchButton onFetched={() => refetch()} />
               </div>
             )}

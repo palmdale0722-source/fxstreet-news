@@ -12,6 +12,7 @@ import {
   getNewsContextForAgent,
   getLatestInsightAndOutlooks,
   getActiveTradingSystem,
+  getActiveSignalAiPrompt,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { signals } from "../drizzle/schema";
@@ -76,10 +77,11 @@ async function buildAnalysisPrompt(
   signal: typeof signals.$inferSelect,
   userId: number
 ): Promise<{ systemPrompt: string; userPrompt: string }> {
-  // 并行获取市场上下文和用户交易体系
-  const [newsCtx, { insight, outlooks }, tradingSystemItems] = await Promise.all([
+  // 并行获取市场上下文、用户交易体系和自定义 Prompt
+  const [newsCtx, { insight, outlooks }, customPrompt, tradingSystemItems] = await Promise.all([
     getNewsContextForAgent(10),
     getLatestInsightAndOutlooks(),
+    getActiveSignalAiPrompt(userId),
     getActiveTradingSystem(userId),
   ]);
 
@@ -100,23 +102,9 @@ async function buildAnalysisPrompt(
   const tradingSystemSection = tradingSystemItems.length > 0
     ? `【用户交易体系与规则】\n${tradingSystemItems.map((item: { category: string; title: string; content: string }) => `[${item.category}] ${item.title}: ${item.content}`).join("\n")}`
     : "";
-
-  const systemPrompt = `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
-
-你必须以严格的 JSON 格式返回分析结果，不要包含任何 markdown 代码块，直接输出 JSON 对象：
-{
-  "decision": "execute" | "watch" | "ignore",
-  "confidence": 0-100,
-  "summary": "一句话结论（30字以内）",
-  "reasoning": "详细分析推理（200字以内）",
-  "marketContext": "当前市场背景简述（100字以内）",
-  "riskWarning": "主要风险提示（100字以内，如无风险可为空字符串）"
-}
-
-决策标准：
-- execute（建议执行）：信号方向与市场趋势一致，符合用户交易体系，风险可控
-- watch（建议观察）：信号有一定价值但存在不确定因素，建议等待更好入场时机
-- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高
+  // 使用自定义 Prompt 或默认 Prompt
+  const basePrompt = customPrompt?.systemPrompt || getDefaultSystemPrompt();
+  const systemPrompt = `${basePrompt}
 
 ${marketSection}
 
@@ -290,4 +278,25 @@ export async function analyzeUnprocessedSignals(pendingSignals: (typeof signals.
     // 每条信号分析后等待 1 秒，避免 API 限速
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
+}
+
+
+// ─── 默认 System Prompt ────────────────────────────────────────────────────────
+function getDefaultSystemPrompt(): string {
+  return `你是一位专业的外汇交易分析师。你的任务是分析收到的交易信号邮件，结合当前市场状况和用户的交易体系，给出明确的交易决策建议。
+
+你必须以严格的 JSON 格式返回分析结果，不要包含任何 markdown 代码块，直接输出 JSON 对象：
+{
+  "decision": "execute" | "watch" | "ignore",
+  "confidence": 0-100,
+  "summary": "一句话结论（30字以内）",
+  "reasoning": "详细分析推理（200字以内）",
+  "marketContext": "当前市场背景简述（100字以内）",
+  "riskWarning": "主要风险提示（100字以内，如无风险可为空字符串）"
+}
+
+决策标准：
+- execute（建议执行）：信号方向与市场趋势一致，符合用户交易体系，风险可控
+- watch（建议观察）：信号有一定价值但存在不确定因素，建议等待更好入场时机
+- ignore（建议忽略）：信号与市场趋势相悖，或不符合用户交易体系，风险过高`;
 }
