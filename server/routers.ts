@@ -59,7 +59,8 @@ import {
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
-import { restartImapJobs, safeRunStrengthMatrix } from "./cronJobs";
+import { restartImapJobs, safeRunStrengthMatrix, safeRunHealthCheck } from "./cronJobs";
+import { getHealthReports } from "./systemHealthCheck";
 import { invokeLLM } from "./_core/llm";
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
@@ -1161,6 +1162,33 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       .mutation(async ({ input, ctx }) => {
         await deleteTradingConversation(input.id, ctx.user.id);
         return { success: true };
+      }),
+  }),
+
+  // ─── 系统健康自检 ────────────────────────────────────────────────────────────
+  systemHealth: router({
+    // 手动触发自检
+    run: protectedProcedure.mutation(async () => {
+      // 异步执行，立即返回
+      safeRunHealthCheck("manual").catch(console.error);
+      return { success: true, message: "自检已启动，完成后将推送通知" };
+    }),
+
+    // 获取历史报告列表
+    getReports: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional() }).optional())
+      .query(async () => {
+        const reports = await getHealthReports(20);
+        return reports.map((r) => ({
+          ...r,
+          checks: JSON.parse(r.checksJson) as Array<{
+            module: string;
+            status: "ok" | "warn" | "error";
+            message: string;
+            detail?: string;
+            lastActivityAt?: string | null;
+          }>,
+        }));
       }),
   }),
 

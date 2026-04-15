@@ -279,3 +279,13 @@
 - [ ] 前端：Prompt 编辑器（支持预览、保存、版本对比）
 - [ ] 前端：版本历史面板（查看、恢复历史版本）
 - [ ] 测试：验证自定义 Prompt 在信号分析中生效
+
+## 全系统自检功能
+- [ ] 数据库：新增 system_health_reports 表（存储自检历史报告）
+- [ ] 后端：实现 systemHealthCheck 服务（检查 IMAP、AI 分析、数据抓取、数据库等模块）
+- [ ] 后端：tRPC system.runHealthCheck（手动触发自检）
+- [ ] 后端：tRPC system.getHealthReports（获取历史报告）
+- [ ] 后端：cronJobs.ts 添加每周一 09:00（北京时间）自动自检定时任务
+- [ ] 后端：自检完成后通过 Manus 通知推送报告摘要
+- [ ] 前端：/system-health 页面（手动触发 + 历史报告列表）
+- [ ] 前端：导航栏添加「系统自检」入口（管理员可见）

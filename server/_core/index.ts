@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { startCronJobs, startImapJobs, registerAdminRoutes } from "../cronJobs";
+import { startCronJobs, startImapJobs, registerAdminRoutes, startWeeklyHealthCheck } from "../cronJobs";
 import { registerMt4Routes } from "../mt4Routes";
 import { registerStatementRoutes } from "../statementRoutes";
 
@@ -85,6 +85,7 @@ async function startServer() {
     // Start cron jobs after server is ready
     startCronJobs();
     startImapJobs();
+    startWeeklyHealthCheck();
   });
 }
 

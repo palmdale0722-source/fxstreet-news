@@ -374,3 +374,17 @@ export const signalAiPrompts = mysqlTable("signal_ai_prompts", {
 
 export type SignalAiPrompt = typeof signalAiPrompts.$inferSelect;
 export type InsertSignalAiPrompt = typeof signalAiPrompts.$inferInsert;
+
+// 系统健康自检报告表
+export const systemHealthReports = mysqlTable("system_health_reports", {
+	id: int().autoincrement().notNull(),
+	runAt: timestamp("run_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	overallStatus: mysqlEnum("overall_status", ['ok','warn','error']).notNull(),
+	checksJson: text("checks_json").notNull(),
+	summary: text().notNull(),
+	durationMs: int("duration_ms").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export type SystemHealthReport = typeof systemHealthReports.$inferSelect;
+export type InsertSystemHealthReport = typeof systemHealthReports.$inferInsert;

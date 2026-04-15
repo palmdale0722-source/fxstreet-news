@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Signals from "./pages/Signals";
 import SignalPromptConfig from "./pages/SignalPromptConfig";
+import SystemHealth from "./pages/SystemHealth";
 import Agent from "./pages/Agent";
 import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
@@ -17,6 +18,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/signals"} component={Signals} />
       <Route path={"/signals/prompt-config"} component={SignalPromptConfig} />
+      <Route path={"/system-health"} component={SystemHealth} />
       <Route path={"/agent"} component={Agent} />
       <Route path={"/ideas"} component={Ideas} />
       <Route path={"/my-system"} component={MySystem} />

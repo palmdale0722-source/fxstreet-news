@@ -4,6 +4,7 @@ import { getActiveImapConfig, saveCurrencyStrengthCache, getCurrencyStrengthCach
 import { analyzeNewTvIdeas } from "./tvIdeaAnalyzer";
 import { generateCurrencyStrengthMatrix, generateEconomicSummaries } from "./currencyStrengthService";
 import { fetchAllCountriesEconomicData } from "./dataScraperService";
+import { runSystemHealthCheck } from "./systemHealthCheck";
 import type { Express } from "express";
 
 let cronTimer: NodeJS.Timeout | null = null;
@@ -13,6 +14,7 @@ let imapTimer: NodeJS.Timeout | null = null;
 let isImapRunning = false;
 
 let isStrengthRunning = false;
+let isHealthCheckRunning = false;
 
 // 每 4 小时执行一次货币强弱矩阵更新
 const STRENGTH_MATRIX_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -67,6 +69,53 @@ function startDailyStrengthMatrixUpdates() {
     }, STRENGTH_MATRIX_INTERVAL_MS);
   }, delayToFirstRun);
 }
+
+// 启动每周自检定时任务（每周一 09:00 北京时间 = UTC 01:00）
+export function startWeeklyHealthCheck() {
+  console.log("[HealthCheck] Scheduling weekly health check (Mon 09:00 CST)");
+
+  function scheduleNextCheck() {
+    // 计算下一个周一 01:00 UTC（= 北京时间 09:00）
+    const now = new Date();
+    const next = new Date(now);
+    // 设置为 UTC 01:00
+    next.setUTCHours(1, 0, 0, 0);
+    // 找到下一个周一（getUTCDay: 0=Sun, 1=Mon）
+    const daysUntilMonday = (8 - now.getUTCDay()) % 7 || 7;
+    next.setUTCDate(now.getUTCDate() + daysUntilMonday);
+
+    const delay = next.getTime() - now.getTime();
+    const daysLeft = Math.round(delay / 1000 / 3600 / 24);
+    console.log(`[HealthCheck] Next weekly check in ${daysLeft} day(s) at ${next.toISOString()}`);
+
+    setTimeout(async () => {
+      await safeRunHealthCheck("weekly");
+      // 执行完后安排下一次
+      scheduleNextCheck();
+    }, delay);
+  }
+
+  scheduleNextCheck();
+}
+
+async function safeRunHealthCheck(trigger: string) {
+  if (isHealthCheckRunning) {
+    console.log(`[HealthCheck] Already running, skipping ${trigger}`);
+    return;
+  }
+  isHealthCheckRunning = true;
+  console.log(`[HealthCheck] Running health check (trigger: ${trigger})`);
+  try {
+    const report = await runSystemHealthCheck();
+    console.log(`[HealthCheck] Done: ${report.summary}`);
+  } catch (e) {
+    console.error(`[HealthCheck] Failed (${trigger}):`, e);
+  } finally {
+    isHealthCheckRunning = false;
+  }
+}
+
+export { safeRunHealthCheck };
 
 export function stopCronJobs() {
   if (cronTimer) {
