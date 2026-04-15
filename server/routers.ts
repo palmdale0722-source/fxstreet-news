@@ -51,6 +51,10 @@ import {
   deleteTradingConversation,
   getNotifyConfig,
   saveNotifyConfig,
+  getActiveSignalAiPrompt,
+  saveSignalAiPrompt,
+  getSignalAiPromptHistory,
+  rollbackSignalAiPrompt,
   type SignalStatus,
 } from "./db";
 import { runFullUpdate } from "./fxService";
@@ -1156,6 +1160,43 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         await deleteTradingConversation(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── 交易信号 AI Prompt 配置 ───────────────────────────────────────────────
+  signalPrompt: router({
+    // 获取当前使用的 Prompt
+    getCurrent: protectedProcedure.query(async ({ ctx }) => {
+      const prompt = await getActiveSignalAiPrompt(ctx.user.id);
+      return prompt;
+    }),
+
+    // 保存新的 Prompt 版本
+    save: protectedProcedure
+      .input(z.object({ content: z.string().min(10, "Prompt 内容过短") }))
+      .mutation(async ({ input, ctx }) => {
+        const saved = await saveSignalAiPrompt(ctx.user.id, input.content);
+        return saved;
+      }),
+
+    // 获取历史版本列表
+    getHistory: protectedProcedure.query(async ({ ctx }) => {
+      const history = await getSignalAiPromptHistory(ctx.user.id);
+      return history;
+    }),
+
+    // 回滚到历史版本
+    rollback: protectedProcedure
+      .input(z.object({ versionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const result = await rollbackSignalAiPrompt(ctx.user.id, input.versionId);
+        if (!result) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "版本不存在或无权限访问",
+          });
+        }
         return { success: true };
       }),
   }),

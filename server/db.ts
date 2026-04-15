@@ -920,7 +920,7 @@ export async function saveTradingViewNews(data: InsertTradingViewNews): Promise<
 // ─── 交易信号 AI Prompt 配置 ──────────────────────────────────────────────────
 
 /** 获取当前激活的 AI Prompt（如果没有则返回 null） */
-export async function getActiveSignalAiPrompt() {
+export async function getActiveSignalAiPrompt(userId: number) {
   const db = await getDb();
   if (!db) return null;
   const rows = await db.select().from(signalAiPrompts)
@@ -931,7 +931,7 @@ export async function getActiveSignalAiPrompt() {
 }
 
 /** 获取所有 AI Prompt 版本历史 */
-export async function getSignalAiPromptHistory(limit = 20) {
+export async function getSignalAiPromptHistory(userId: number, limit = 20) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(signalAiPrompts)
@@ -940,16 +940,12 @@ export async function getSignalAiPromptHistory(limit = 20) {
 }
 
 /** 保存新的 AI Prompt 版本 */
-export async function saveSignalAiPrompt(data: {
-  systemPrompt: string;
-  description?: string;
-  createdBy?: number;
-}): Promise<void> {
+// 修复后的函数
+export async function saveSignalAiPrompt(userId: number, content: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   try {
-    // 获取最新版本号
     const latest = await db.select({ version: signalAiPrompts.version })
       .from(signalAiPrompts)
       .orderBy(desc(signalAiPrompts.version))
@@ -957,48 +953,50 @@ export async function saveSignalAiPrompt(data: {
     
     const nextVersion = (latest[0]?.version ?? 0) + 1;
     
-    // 将旧的激活版本设为非激活
     await db.update(signalAiPrompts)
       .set({ isActive: false })
       .where(eq(signalAiPrompts.isActive, true));
     
-    // 插入新版本
     await db.insert(signalAiPrompts).values({
       version: nextVersion,
-      systemPrompt: data.systemPrompt,
-      description: data.description ?? null,
-      createdBy: data.createdBy ?? null,
+      systemPrompt: content,
+      description: null,
+      createdBy: userId,
       isActive: true,
     });
+    
+    const rows = await db.select().from(signalAiPrompts)
+      .where(eq(signalAiPrompts.version, nextVersion))
+      .limit(1);
+    
+    return rows[0] ?? null;
   } catch (error) {
     console.error("[DB] Failed to save signal AI prompt:", error);
     throw error;
   }
 }
 
-/** 回滚到指定版本的 Prompt */
-export async function rollbackSignalAiPrompt(version: number): Promise<void> {
+export async function rollbackSignalAiPrompt(userId: number, versionId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   try {
-    // 获取指定版本
     const target = await db.select().from(signalAiPrompts)
-      .where(eq(signalAiPrompts.version, version))
+      .where(eq(signalAiPrompts.version, versionId))
       .limit(1);
     
     if (target.length === 0) {
-      throw new Error(`Prompt version ${version} not found`);
+      return null;
     }
     
-    // 将所有版本设为非激活
     await db.update(signalAiPrompts)
       .set({ isActive: false });
     
-    // 将指定版本设为激活
     await db.update(signalAiPrompts)
       .set({ isActive: true })
-      .where(eq(signalAiPrompts.version, version));
+      .where(eq(signalAiPrompts.version, versionId));
+    
+    return target[0];
   } catch (error) {
     console.error("[DB] Failed to rollback signal AI prompt:", error);
     throw error;

@@ -268,7 +268,8 @@
 
 
 ## 交易信号 AI Prompt 可配置化
-- [ ] 数据库：新增 signal_ai_prompts 表（存储自定义 System Prompt 版本）
+- [x] 数据库：新增 signal_ai_prompts 表（存储自定义 System Prompt 版本）
+- [x] 后端：db.ts 新增 Signal AI Prompt 管理函数
 - [ ] 后端：tRPC signalPrompt.getCurrent（获取当前使用的 Prompt）
 - [ ] 后端：tRPC signalPrompt.save（保存新的 Prompt 版本）
 - [ ] 后端：tRPC signalPrompt.getHistory（获取历史版本列表）
