@@ -265,3 +265,16 @@
 - [ ] 前端：添加自动检查更新状态的机制（每 5 分钟检查一次）
 - [ ] 前端：添加手动刷新按钮
 - [ ] 测试完整功能
+
+
+## 交易信号 AI Prompt 可配置化
+- [ ] 数据库：新增 signal_ai_prompts 表（存储自定义 System Prompt 版本）
+- [ ] 后端：tRPC signalPrompt.getCurrent（获取当前使用的 Prompt）
+- [ ] 后端：tRPC signalPrompt.save（保存新的 Prompt 版本）
+- [ ] 后端：tRPC signalPrompt.getHistory（获取历史版本列表）
+- [ ] 后端：tRPC signalPrompt.rollback（回滚到历史版本）
+- [ ] 后端：修改 signalAnalyzer.ts 使用数据库中的自定义 Prompt
+- [ ] 前端：新增 /signals/prompt-config 页面
+- [ ] 前端：Prompt 编辑器（支持预览、保存、版本对比）
+- [ ] 前端：版本历史面板（查看、恢复历史版本）
+- [ ] 测试：验证自定义 Prompt 在信号分析中生效

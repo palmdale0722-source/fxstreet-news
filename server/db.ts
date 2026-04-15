@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache, tradingviewNews, InsertTradingViewNews } from "../drizzle/schema";
+import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache, tradingviewNews, InsertTradingViewNews, signalAiPrompts, InsertSignalAiPrompt } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -913,5 +913,94 @@ export async function saveTradingViewNews(data: InsertTradingViewNews): Promise<
     });
   } catch (error) {
     console.error("[DB] Failed to save TradingView news:", error);
+  }
+}
+
+
+// ─── 交易信号 AI Prompt 配置 ──────────────────────────────────────────────────
+
+/** 获取当前激活的 AI Prompt（如果没有则返回 null） */
+export async function getActiveSignalAiPrompt() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(signalAiPrompts)
+    .where(eq(signalAiPrompts.isActive, true))
+    .orderBy(desc(signalAiPrompts.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** 获取所有 AI Prompt 版本历史 */
+export async function getSignalAiPromptHistory(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(signalAiPrompts)
+    .orderBy(desc(signalAiPrompts.createdAt))
+    .limit(limit);
+}
+
+/** 保存新的 AI Prompt 版本 */
+export async function saveSignalAiPrompt(data: {
+  systemPrompt: string;
+  description?: string;
+  createdBy?: number;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    // 获取最新版本号
+    const latest = await db.select({ version: signalAiPrompts.version })
+      .from(signalAiPrompts)
+      .orderBy(desc(signalAiPrompts.version))
+      .limit(1);
+    
+    const nextVersion = (latest[0]?.version ?? 0) + 1;
+    
+    // 将旧的激活版本设为非激活
+    await db.update(signalAiPrompts)
+      .set({ isActive: false })
+      .where(eq(signalAiPrompts.isActive, true));
+    
+    // 插入新版本
+    await db.insert(signalAiPrompts).values({
+      version: nextVersion,
+      systemPrompt: data.systemPrompt,
+      description: data.description ?? null,
+      createdBy: data.createdBy ?? null,
+      isActive: true,
+    });
+  } catch (error) {
+    console.error("[DB] Failed to save signal AI prompt:", error);
+    throw error;
+  }
+}
+
+/** 回滚到指定版本的 Prompt */
+export async function rollbackSignalAiPrompt(version: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    // 获取指定版本
+    const target = await db.select().from(signalAiPrompts)
+      .where(eq(signalAiPrompts.version, version))
+      .limit(1);
+    
+    if (target.length === 0) {
+      throw new Error(`Prompt version ${version} not found`);
+    }
+    
+    // 将所有版本设为非激活
+    await db.update(signalAiPrompts)
+      .set({ isActive: false });
+    
+    // 将指定版本设为激活
+    await db.update(signalAiPrompts)
+      .set({ isActive: true })
+      .where(eq(signalAiPrompts.version, version));
+  } catch (error) {
+    console.error("[DB] Failed to rollback signal AI prompt:", error);
+    throw error;
   }
 }
