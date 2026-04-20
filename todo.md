@@ -295,3 +295,7 @@
 - [x] 后端：tRPC userApiConfig.get（返回完整配置，包括 apiKey 明文）
 - [x] 后端：tRPC userApiConfig.save（保存配置到数据库）
 - [x] 前端：Agent 页面登录后从服务器加载 API 配置，保存时同步写入数据库，不再依赖 localStorage
+
+## Bug 修复 - AI 分析师"标的分析"和"自由讨论"按钮无反应
+- [x] 根本原因：createAgentSession 使用 $returningId() 导致 500 错误（agentSessions 表无 primaryKey 标注）
+- [x] 修复：改用 (result[0] as { insertId: number }).insertId 获取插入 ID

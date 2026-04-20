@@ -225,8 +225,9 @@ export async function getAgentSessions(userId: number) {
 export async function createAgentSession(data: InsertAgentSession) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
-  const [result] = await db.insert(agentSessions).values(data).$returningId();
-  const rows = await db.select().from(agentSessions).where(eq(agentSessions.id, result.id)).limit(1);
+  const result = await db.insert(agentSessions).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(agentSessions).where(eq(agentSessions.id, insertId)).limit(1);
   return rows[0];
 }
 
