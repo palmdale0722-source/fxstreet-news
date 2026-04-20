@@ -25,6 +25,108 @@ function authCheck(req: Request, res: Response): boolean {
 
 export function registerMt4Routes(app: Express) {
   /**
+   * POST /api/mt4/batch-upload
+   * 批量上传 MT4 本地缓存的 CSV 数据
+   * 用于 Python 脚本定期上传本地缓存的 K 线数据
+   * Body: {
+   *   symbol: string,           // 货币对，如 EURUSD
+   *   bars: string[],           // CSV 格式的 K 线数据
+   *   timestamp: string,        // 上传时间戳
+   *   count: number            // 数据条数
+   * }
+   */
+  app.post("/api/mt4/batch-upload", async (req: Request, res: Response) => {
+    // 使用 X-API-Key 进行鉴权
+    const apiKey = req.headers["x-api-key"] as string;
+    if (!apiKey || apiKey !== getMt4ApiKey()) {
+      res.status(401).json({ success: false, message: "Invalid API key" });
+      return;
+    }
+
+    const { symbol, bars, timestamp, count } = req.body as {
+      symbol: string;
+      bars: string[];
+      timestamp: string;
+      count: number;
+    };
+
+    if (!symbol || !Array.isArray(bars) || bars.length === 0) {
+      res.status(400).json({ success: false, message: "symbol and bars array are required" });
+      return;
+    }
+
+    try {
+      // 解析 CSV 数据并转换为标准格式
+      const parsedBars = bars
+        .map((line) => {
+          const parts = line.trim().split(",");
+          if (parts.length !== 8) return null;
+
+          return {
+            symbol: parts[0].toUpperCase(),
+            barTime: parts[1],
+            open: parts[2],
+            high: parts[3],
+            low: parts[4],
+            close: parts[5],
+            volume: parts[6],
+            spread: parts[7],
+          };
+        })
+        .filter((bar) => bar !== null) as Array<{
+          symbol: string;
+          barTime: string;
+          open: string;
+          high: string;
+          low: string;
+          close: string;
+          volume: string;
+          spread: string;
+        }>;
+
+      if (parsedBars.length === 0) {
+        res.status(400).json({ success: false, message: "No valid bars found in CSV data" });
+        return;
+      }
+
+      // 转换为 Mt4PushPayload 格式
+      const payload: Mt4PushPayload = {
+        clientId: "batch-upload-python",
+        accountNumber: "batch-upload",
+        broker: "batch-upload",
+        timeframe: "M15",
+        bars: parsedBars.map((bar) => ({
+          symbol: bar.symbol,
+          barTime: bar.barTime,
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+          volume: bar.volume,
+          spread: bar.spread,
+        })),
+      };
+
+      // 保存到数据库
+      const result = await saveMt4Bars(payload);
+
+      console.log(
+        `[MT4] Batch upload from Python: ${result.inserted} bars for ${symbol}, timestamp: ${timestamp}`
+      );
+
+      res.json({
+        success: true,
+        inserted: result.inserted,
+        symbols: result.symbols,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("[MT4] Batch upload error:", err);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
+  /**
    * POST /api/mt4/push
    * MT4 EA 推送行情数据（K线 OHLC）
    */

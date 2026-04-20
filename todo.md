@@ -299,3 +299,15 @@
 ## Bug 修复 - AI 分析师"标的分析"和"自由讨论"按钮无反应
 - [x] 根本原因：createAgentSession 使用 $returningId() 导致 500 错误（agentSessions 表无 primaryKey 标注）
 - [x] 修复：改用 (result[0] as { insertId: number }).insertId 获取插入 ID
+
+
+## MT4 推送稳定性改进 - 本地缓存 + 批量上传
+- [x] 创建改进版 MT4 EA (FXStreetBridge_v3_LocalCache.mq4)：改为本地 CSV 文件缓存
+- [x] 编写 Python 上传脚本 (upload_mt4_data.py)：每 30 分钟读取并批量上传本地缓存
+- [x] 后端添加 /api/mt4/batch-upload 接口：处理批量数据上传和入库
+- [x] 编写 Windows 任务计划器配置指南 (Windows_Task_Scheduler_Setup.md)
+- [x] 编写完整实施指南 (IMPLEMENTATION_GUIDE.md)
+- [ ] 在 MT4 中部署新 EA 并测试
+- [ ] 在 Windows 电脑上配置 Python 脚本和任务计划器
+- [ ] 监控一周的数据完整性和推送稳定性
+- [ ] 根据实际情况调整上传频率（可改为 1 小时或其他）
