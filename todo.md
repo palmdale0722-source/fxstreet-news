@@ -289,3 +289,9 @@
 - [ ] 后端：自检完成后通过 Manus 通知推送报告摘要
 - [ ] 前端：/system-health 页面（手动触发 + 历史报告列表）
 - [ ] 前端：导航栏添加「系统自检」入口（管理员可见）
+
+## AI API 配置持久化（服务器端存储）
+- [x] 数据库：已有 userApiConfigs 表（存储 API 地址、密鉅、模型名称等）
+- [x] 后端：tRPC userApiConfig.get（返回完整配置，包括 apiKey 明文）
+- [x] 后端：tRPC userApiConfig.save（保存配置到数据库）
+- [x] 前端：Agent 页面登录后从服务器加载 API 配置，保存时同步写入数据库，不再依赖 localStorage

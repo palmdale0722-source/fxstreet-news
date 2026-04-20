@@ -830,16 +830,16 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
   }),
   // ─── 用户 AI API 配置路由 ─────────────────────────────────────────────────
   userApiConfig: router({
-    // 获取当前用户的 API 配置（不返回 apiKey 明文，只返回是否已配置）
+    // 获取当前用户的 API 配置（返回完整配置，包括 apiKey 明文，供前端初始化使用）
     get: protectedProcedure.query(async ({ ctx }) => {
       const config = await getUserApiConfig(ctx.user.id);
       if (!config) return null;
       return {
         apiUrl: config.apiUrl,
-        apiKeyMasked: config.apiKey.slice(0, 6) + "****" + config.apiKey.slice(-4),
+        apiKey: config.apiKey,
         model: config.model,
-        temperature: config.temperature,
-        maxTokens: config.maxTokens,
+        temperature: config.temperature ? parseFloat(config.temperature) : 0.7,
+        maxTokens: config.maxTokens ?? 4096,
         updatedAt: config.updatedAt,
       };
     }),

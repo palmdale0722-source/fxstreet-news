@@ -443,6 +443,27 @@ export default function Agent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = trpc.useUtils();
 
+  // 从服务器加载 API 配置（登录后自动同步）
+  const { data: serverApiConfig } = trpc.userApiConfig.get.useQuery(
+    undefined,
+    { enabled: isAuthenticated, staleTime: 0 }
+  );
+
+  // 当服务器配置返回时，同步到本地状态和 localStorage
+  useEffect(() => {
+    if (serverApiConfig) {
+      const merged: ApiConfig = {
+        apiUrl: serverApiConfig.apiUrl || DEFAULT_CONFIG.apiUrl,
+        apiKey: serverApiConfig.apiKey || DEFAULT_CONFIG.apiKey,
+        model: serverApiConfig.model || DEFAULT_CONFIG.model,
+        temperature: serverApiConfig.temperature ?? DEFAULT_CONFIG.temperature,
+        maxTokens: serverApiConfig.maxTokens ?? DEFAULT_CONFIG.maxTokens,
+      };
+      setApiConfig(merged);
+      saveConfig(merged);
+    }
+  }, [serverApiConfig]);
+
   const isApiConfigured = !!(apiConfig.apiUrl.trim() && apiConfig.apiKey.trim() && apiConfig.model.trim());
 
   const { data: sessions = [], isLoading: sessionsLoading } = trpc.agent.getSessions.useQuery(
