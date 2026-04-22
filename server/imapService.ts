@@ -153,12 +153,13 @@ export async function fetchSignalEmails(
 
                 if (existing.length > 0) return;
 
+                const receivedAtStr = receivedAt instanceof Date ? receivedAt.toISOString() : String(receivedAt);
                 const insertResult = await db.insert(signals).values({
                   messageId,
                   subject,
                   body: body.trim(),
                   fromEmail,
-                  receivedAt,
+                  receivedAt: receivedAtStr,
                   status: "pending",
                 });
                 result.inserted++;
@@ -171,9 +172,9 @@ export async function fetchSignalEmails(
                   subject,
                   body: body.trim(),
                   fromEmail,
-                  receivedAt,
+                  receivedAt: receivedAtStr,
                   status: "pending" as const,
-                  createdAt: new Date(),
+                  createdAt: new Date().toISOString(),
                 };
                 analyzeSignal(newSignal).catch(err =>
                   console.error(`[IMAP] AI analysis failed for signal #${newSignalId}:`, err)

@@ -267,6 +267,11 @@
 - [ ] 测试完整功能
 
 
+## AI 分析师页面数据准确性问题
+- [ ] 修复 agent.getQuote 返回 null 的问题
+- [ ] 验证 AI 分析师使用的是最新的 MT4 数据而非缓存数据
+- [ ] 测试 AUDNZD 等货币对的数据准确性
+
 ## 交易信号 AI Prompt 可配置化
 - [x] 数据库：新增 signal_ai_prompts 表（存储自定义 System Prompt 版本）
 - [x] 后端：db.ts 新增 Signal AI Prompt 管理函数
@@ -307,7 +312,13 @@
 - [x] 后端添加 /api/mt4/batch-upload 接口：处理批量数据上传和入库
 - [x] 编写 Windows 任务计划器配置指南 (Windows_Task_Scheduler_Setup.md)
 - [x] 编写完整实施指南 (IMPLEMENTATION_GUIDE.md)
-- [ ] 在 MT4 中部署新 EA 并测试
-- [ ] 在 Windows 电脑上配置 Python 脚本和任务计划器
-- [ ] 监控一周的数据完整性和推送稳定性
+- [x] 在 MT4 中部署新 EA 并测试
+- [x] 在 Windows 电脑上配置 Python 脚本和任务计划器
+- [x] 监控一周的数据完整性和推送稳定性
 - [ ] 根据实际情况调整上传频率（可改为 1 小时或其他）
+
+## AI 分析师页面 MT4 连接状态和数据问题修复
+- [x] 修改 MT4 连接状态刷新频率从 60 秒改为 30 秒，提高实时性
+- [x] 验证 AUDNZD 数据在数据库中存在（6 条记录，最新时间 2026-04-22T09:15:00 UTC）
+- [ ] 调查 agent.getQuote 返回 null 的原因（getMt4Bars 查询问题）
+- [ ] 验证 AI 分析师是否能正确显示最新的 MT4 K 线数据

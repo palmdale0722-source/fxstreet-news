@@ -54,14 +54,14 @@ export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: 
     return !isNaN(barTime.getTime()) && G8_SYMBOLS.includes(symbol);
   });
 
-  // 批量插入优化：使用 Promise.all 并发处理，但限制并发数避免连接池耗尽
+  // 批量插入优化：使用 Promise.all 并发处理，但限制并发数不超过连接池耗尽
   const concurrency = 10;
   for (let i = 0; i < validBars.length; i += concurrency) {
     const batch = validBars.slice(i, i + concurrency);
     try {
       await Promise.all(batch.map(async (bar) => {
         const symbol = bar.symbol.toUpperCase();
-        const barTime = new Date(bar.barTime);
+        const barTime = new Date(bar.barTime).toISOString();
         try {
           await db
             .insert(mt4Bars)
@@ -101,6 +101,7 @@ export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: 
   const db2 = await getDb();
   if (db2) {
     try {
+      const now = new Date().toISOString();
       await db2
         .insert(mt4Status)
         .values({
@@ -108,14 +109,14 @@ export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: 
           accountNumber: payload.accountNumber || null,
           broker: payload.broker || null,
           symbolsCount: symbols.length,
-          lastPushedAt: new Date().toISOString(),
+          lastPushedAt: now,
         })
         .onDuplicateKeyUpdate({
           set: {
             accountNumber: payload.accountNumber || null,
             broker: payload.broker || null,
             symbolsCount: symbols.length,
-            lastPushedAt: new Date().toISOString(),
+            lastPushedAt: now,
           },
         });
     } catch (error) {
@@ -190,11 +191,40 @@ export async function getMt4ConnectionStatus(): Promise<any[]> {
   if (!db) return [];
 
   try {
-    return await db
+    // 查询所有 MT4 K 线数据，按时间倒序排列
+    const allBars = await db
       .select()
-      .from(mt4Status)
-      .orderBy(desc(mt4Status.lastPushedAt))
-      .limit(10);
+      .from(mt4Bars)
+      .orderBy(desc(mt4Bars.barTime))
+      .limit(100);
+
+    if (!allBars || allBars.length === 0) {
+      return [];
+    }
+
+    // 按货币对分组，获取每个货币对的最新时间戳
+    const statusMap = new Map<string, any>();
+    const now = Date.now();
+    const thirtyMinutesAgo = now - 30 * 60 * 1000;
+
+    for (const bar of allBars) {
+      if (!statusMap.has(bar.symbol)) {
+        const barTime = new Date(bar.barTime).getTime();
+        statusMap.set(bar.symbol, {
+          symbol: bar.symbol,
+          lastPushedAt: new Date(bar.barTime),
+          recordCount: 1,
+          isOnline: barTime > thirtyMinutesAgo,
+        });
+      } else {
+        statusMap.get(bar.symbol)!.recordCount++;
+      }
+    }
+
+    // 返回按最新时间排序的结果
+    return Array.from(statusMap.values()).sort(
+      (a, b) => new Date(b.lastPushedAt).getTime() - new Date(a.lastPushedAt).getTime()
+    );
   } catch (error) {
     console.error("[MT4] Failed to get connection status:", error);
     return [];

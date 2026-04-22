@@ -13,7 +13,7 @@ import {
   getSignals,
   updateSignalStatus,
   getSignalNotes,
-  upsertSignalNote,
+  saveSignalNote,
   getAgentSessions,
   createAgentSession,
   deleteAgentSession,
@@ -166,7 +166,7 @@ export const appRouter = router({
         content: z.string().min(1).max(2000),
       }))
       .mutation(async ({ input, ctx }) => {
-        await upsertSignalNote({
+        await saveSignalNote({
           signalId: input.signalId,
           userId: ctx.user.id,
           userName: ctx.user.name || ctx.user.email || "匿名用户",
@@ -276,10 +276,48 @@ export const appRouter = router({
         return getAgentMessages(input.sessionId);
       }),
 
-    // 获取实时行情（供前端展示价格标签）
+    // 获取实时行情（优先使用 MT4 数据，降级回 Yahoo Finance）
     getQuote: publicProcedure
       .input(z.object({ pair: z.string() }))
       .query(async ({ input }) => {
+        // 转换对名称为 MT4 符号格式（去掉斜杠）
+        const mt4Symbol = input.pair.replace("/", "");
+        
+        // 尝试从 MT4 获取最新 K 线
+        const mt4Bars = await getMt4Bars(mt4Symbol, 100);
+        if (mt4Bars && mt4Bars.length > 0) {
+          const latestBar = mt4Bars[0]; // 最新的 K 线
+          const previousBar = mt4Bars.length > 1 ? mt4Bars[1] : null;
+          
+          const currentPrice = parseFloat(latestBar.close);
+          const previousClose = previousBar ? parseFloat(previousBar.close) : currentPrice;
+          const change = currentPrice - previousClose;
+          const changePct = previousClose !== 0 ? (change / previousClose) * 100 : 0;
+          
+          // 计算日内高低点（从最近 K 线中）
+          const recentBars = mt4Bars.slice(0, 20); // 最近 20 根 K 线
+          const highs = recentBars.map(b => parseFloat(b.high));
+          const lows = recentBars.map(b => parseFloat(b.low));
+          const dayHigh = Math.max(...highs);
+          const dayLow = Math.min(...lows);
+          
+          return {
+            pair: input.pair,
+            currentPrice,
+            change,
+            changePct,
+            dayHigh,
+            dayLow,
+            open: parseFloat(latestBar.open),
+            previousClose,
+            trend: "neutral", // MT4 数据不计算趋势，使用中性
+            rsi14: null,
+            fetchedAt: new Date(latestBar.barTime).toISOString(),
+            source: "mt4",
+          };
+        }
+        
+        // MT4 无数据，降级回 Yahoo Finance
         const quote = await getForexQuote(input.pair);
         if (!quote) return null;
         return {
@@ -294,6 +332,7 @@ export const appRouter = router({
           trend: quote.indicators.trend,
           rsi14: quote.indicators.rsi14,
           fetchedAt: quote.fetchedAt,
+          source: "yahoo",
         };
       }),
 

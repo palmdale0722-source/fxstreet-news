@@ -285,7 +285,7 @@ function ChatHeader({
     { refetchInterval: 30000, staleTime: 25000 }
   );
   const { data: mt4Statuses } = trpc.mt4.getStatus.useQuery(undefined, {
-    refetchInterval: 60000,
+    refetchInterval: 30000,  // 每 30 秒刷新一次，而不是 60 秒
   });
   const mt4Online = mt4Statuses && mt4Statuses.length > 0 && mt4Statuses.some((s: { isOnline: boolean }) => s.isOnline);
   const mt4LastPush = mt4Statuses && mt4Statuses.length > 0

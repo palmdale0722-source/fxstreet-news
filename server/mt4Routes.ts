@@ -103,7 +103,7 @@ export function registerMt4Routes(app: Express) {
           low: bar.low,
           close: bar.close,
           volume: bar.volume,
-          spread: bar.spread,
+          spread: bar.spread ? parseInt(bar.spread, 10) : 0,
         })),
       };
 

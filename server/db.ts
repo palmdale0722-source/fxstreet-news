@@ -1,6 +1,7 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, InsertNews, InsertInsight, InsertOutlook, InsertSubscription, InsertSignal, InsertSignalNote, InsertAgentSession, InsertAgentMessage, InsertTvIdea, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, InsertMt4IndicatorSignal, InsertMt4IndicatorConfig, InsertTradeJournal, InsertTradingSystem, userApiConfigs, InsertUserApiConfig, signalAnalyses, InsertSignalAnalysis, imapConfig, InsertImapConfig, mt4TwValues, InsertMt4TwValue, mt4TfSignals, InsertMt4TfSignal, tradingConversations, InsertTradingConversation, notifyConfig, InsertNotifyConfig, tvIdeaAnalyses, InsertTvIdeaAnalysis, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt } from "../drizzle/schema";
+import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt } from "../drizzle/schema";
+
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -19,12 +20,12 @@ export async function getDb() {
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
-export async function upsertUser(user: InsertUser): Promise<void> {
+export async function upsertUser(user: any): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
   if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
   try {
-    const values: InsertUser = { openId: user.openId };
+    const values: any = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
@@ -57,7 +58,7 @@ export async function getUserByOpenId(openId: string) {
 
 // ─── News ─────────────────────────────────────────────────────────────────────
 
-export async function insertNewsItems(items: InsertNews[]): Promise<number> {
+export async function insertNewsItems(items: any[]): Promise<number> {
   const db = await getDb();
   if (!db || items.length === 0) return 0;
   let inserted = 0;
@@ -104,7 +105,7 @@ export async function getTodayInsight(date: string) {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function upsertInsight(data: InsertInsight): Promise<void> {
+export async function upsertInsight(data: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(insights).values(data).onDuplicateKeyUpdate({
@@ -115,7 +116,7 @@ export async function upsertInsight(data: InsertInsight): Promise<void> {
       forex: data.forex,
       assets: data.assets,
       tradingAdvice: data.tradingAdvice,
-      generatedAt: new Date(),
+      generatedAt: new Date().toISOString(),
     }
   });
 }
@@ -130,7 +131,7 @@ export async function getTodayOutlooks(date: string) {
     .orderBy(outlooks.currency);
 }
 
-export async function upsertOutlook(data: InsertOutlook): Promise<void> {
+export async function upsertOutlook(data: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   // Delete existing for this date+currency, then insert fresh
@@ -142,11 +143,11 @@ export async function upsertOutlook(data: InsertOutlook): Promise<void> {
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────────────────────────
 
-export async function addSubscription(data: InsertSubscription): Promise<{ success: boolean; message: string }> {
+export async function addSubscription(data: any): Promise<{ success: boolean; message: string }> {
   const db = await getDb();
   if (!db) return { success: false, message: "数据库不可用" };
   try {
-    await db.insert(subscriptions).values(data).onDuplicateKeyUpdate({ set: { active: true } });
+    await db.insert(subscriptions).values(data).onDuplicateKeyUpdate({ set: { active: 1 } });
     return { success: true, message: "订阅成功！" };
   } catch (e) {
     return { success: false, message: "订阅失败，请稍后重试" };
@@ -195,7 +196,7 @@ export async function getSignalNotes(signalId: number) {
     .orderBy(desc(signalNotes.updatedAt));
 }
 
-export async function upsertSignalNote(data: InsertSignalNote): Promise<void> {
+export async function saveSignalNote(data: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   const existing = await db.select({ id: signalNotes.id })
@@ -204,7 +205,7 @@ export async function upsertSignalNote(data: InsertSignalNote): Promise<void> {
     .limit(1);
   if (existing.length > 0) {
     await db.update(signalNotes)
-      .set({ content: data.content, userName: data.userName, updatedAt: new Date() })
+      .set({ content: data.content, userName: data.userName, updatedAt: new Date().toISOString() })
       .where(eq(signalNotes.id, existing[0].id));
   } else {
     await db.insert(signalNotes).values(data);
@@ -222,7 +223,7 @@ export async function getAgentSessions(userId: number) {
     .limit(50);
 }
 
-export async function createAgentSession(data: InsertAgentSession) {
+export async function createAgentSession(data: any) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
   const result = await db.insert(agentSessions).values(data);
@@ -252,7 +253,7 @@ export async function getAgentMessages(sessionId: number) {
     .orderBy(agentMessages.createdAt);
 }
 
-export async function saveAgentMessage(data: InsertAgentMessage) {
+export async function saveAgentMessage(data: any) {
   const db = await getDb();
   if (!db) return;
   await db.insert(agentMessages).values(data);
@@ -283,7 +284,7 @@ export async function getLatestInsightAndOutlooks() {
 }
 // ─── TradingView 交易想法 ──────────────────────────────────────────────────────
 
-export async function insertTvIdeas(items: InsertTvIdea[]): Promise<number> {
+export async function insertTvIdeas(items: any[]): Promise<number> {
   const db = await getDb();
   if (!db || items.length === 0) return 0;
   let inserted = 0;
@@ -330,7 +331,7 @@ export async function getTvIdeasForAgent(pair: string, limit = 5) {
 
 // ─── MT4 自定义指标信号 ──────────────────────────────────────────────────────
 
-export async function upsertIndicatorSignal(signal: InsertMt4IndicatorSignal): Promise<void> {
+export async function upsertIndicatorSignal(signal: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   // 按 symbol + timeframe + indicatorName 唯一更新
@@ -363,7 +364,7 @@ export async function getIndicatorConfigs() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(mt4IndicatorConfigs)
-    .where(eq(mt4IndicatorConfigs.active, true))
+    .where(eq(mt4IndicatorConfigs.active, 1))
     .orderBy(mt4IndicatorConfigs.id);
 }
 
@@ -373,7 +374,7 @@ export async function getAllIndicatorConfigs() {
   return db.select().from(mt4IndicatorConfigs).orderBy(mt4IndicatorConfigs.id);
 }
 
-export async function upsertIndicatorConfig(config: InsertMt4IndicatorConfig): Promise<void> {
+export async function upsertIndicatorConfig(config: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(mt4IndicatorConfigs).values(config).onDuplicateKeyUpdate({
@@ -429,14 +430,14 @@ export async function getTradeJournalForAgent(userId: number, pair: string, limi
   return [...pairTrades, ...otherTrades.filter((t: { pair: string }) => t.pair !== normalizedPair)].slice(0, limit);
 }
 
-export async function createTradeJournalEntry(entry: InsertTradeJournal): Promise<number> {
+export async function createTradeJournalEntry(entry: any): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   const result = await db.insert(tradeJournal).values(entry);
   return (result[0] as { insertId: number }).insertId;
 }
 
-export async function updateTradeJournalEntry(id: number, userId: number, updates: Partial<InsertTradeJournal>): Promise<void> {
+export async function updateTradeJournalEntry(id: number, userId: number, updates: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(tradeJournal).set(updates).where(and(eq(tradeJournal.id, id), eq(tradeJournal.userId, userId)));
@@ -462,18 +463,18 @@ export async function getActiveTradingSystem(userId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(tradingSystem)
-    .where(and(eq(tradingSystem.userId, userId), eq(tradingSystem.active, true)))
+    .where(and(eq(tradingSystem.userId, userId), eq(tradingSystem.active, 1)))
     .orderBy(tradingSystem.sortOrder, tradingSystem.id);
 }
 
-export async function createTradingSystemEntry(entry: InsertTradingSystem): Promise<number> {
+export async function createTradingSystemEntry(entry: any): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   const result = await db.insert(tradingSystem).values(entry);
   return (result[0] as { insertId: number }).insertId;
 }
 
-export async function updateTradingSystemEntry(id: number, userId: number, updates: Partial<InsertTradingSystem>): Promise<void> {
+export async function updateTradingSystemEntry(id: number, userId: number, updates: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(tradingSystem).set(updates).where(and(eq(tradingSystem.id, id), eq(tradingSystem.userId, userId)));
@@ -494,7 +495,7 @@ export async function getUserApiConfig(userId: number) {
   return rows[0] ?? null;
 }
 
-export async function upsertUserApiConfig(config: InsertUserApiConfig): Promise<void> {
+export async function upsertUserApiConfig(config: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(userApiConfigs).values(config).onDuplicateKeyUpdate({
@@ -504,7 +505,7 @@ export async function upsertUserApiConfig(config: InsertUserApiConfig): Promise<
       model: config.model,
       temperature: config.temperature,
       maxTokens: config.maxTokens,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     },
   });
 }
@@ -525,7 +526,7 @@ export async function getSignalAnalysis(signalId: number) {
   return rows[0] ?? null;
 }
 
-export async function saveSignalAnalysis(analysis: InsertSignalAnalysis): Promise<void> {
+export async function saveSignalAnalysis(analysis: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(signalAnalyses).values(analysis).onDuplicateKeyUpdate({
@@ -536,8 +537,8 @@ export async function saveSignalAnalysis(analysis: InsertSignalAnalysis): Promis
       reasoning: analysis.reasoning,
       marketContext: analysis.marketContext,
       riskWarning: analysis.riskWarning,
-      analyzedAt: new Date(),
-      notified: false,
+      analyzedAt: new Date().toISOString(),
+      notified: 0,
     },
   });
 }
@@ -545,7 +546,7 @@ export async function saveSignalAnalysis(analysis: InsertSignalAnalysis): Promis
 export async function markSignalAnalysisNotified(signalId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(signalAnalyses).set({ notified: true }).where(eq(signalAnalyses.signalId, signalId));
+  await db.update(signalAnalyses).set({ notified: 1 }).where(eq(signalAnalyses.signalId, signalId));
 }
 
 // 获取所有待通知的分析结果（decision 为 execute 或 watch，且尚未通知）
@@ -558,7 +559,7 @@ export async function getPendingNotificationAnalyses() {
   })
     .from(signalAnalyses)
     .innerJoin(signals, eq(signalAnalyses.signalId, signals.id))
-    .where(and(eq(signalAnalyses.notified, false)))
+    .where(and(eq(signalAnalyses.notified, 0)))
     .orderBy(desc(signalAnalyses.analyzedAt))
     .limit(20);
 }
@@ -570,12 +571,12 @@ export async function getActiveImapConfig(): Promise<{ email: string; password: 
   const db = await getDb();
   if (db) {
     const rows = await db.select().from(imapConfig)
-      .where(eq(imapConfig.active, true))
+      .where(eq(imapConfig.active, 1))
       .orderBy(desc(imapConfig.updatedAt))
       .limit(1);
     if (rows.length > 0) {
       const r = rows[0];
-      return { email: r.email, password: r.password, host: r.host, port: r.port, tls: r.tls };
+      return { email: r.email, password: r.password, host: r.host, port: r.port, tls: r.tls === 1 };
     }
   }
   // 降级到环境变量
@@ -592,7 +593,7 @@ export async function getImapConfigForDisplay() {
   const db = await getDb();
   if (db) {
     const rows = await db.select().from(imapConfig)
-      .where(eq(imapConfig.active, true))
+      .where(eq(imapConfig.active, 1))
       .orderBy(desc(imapConfig.updatedAt))
       .limit(1);
     if (rows.length > 0) {
@@ -620,9 +621,15 @@ export async function saveImapConfig(config: { email: string; password: string; 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   // 将旧配置设为非激活
-  await db.update(imapConfig).set({ active: false }).where(eq(imapConfig.active, true));
-  // 插入新配置
-  await db.insert(imapConfig).values({ ...config, active: true });
+  await db.update(imapConfig).set({ active: 0 }).where(eq(imapConfig.active, 1));
+  await db.insert(imapConfig).values({ 
+    email: config.email,
+    password: config.password,
+    host: config.host,
+    port: config.port,
+    tls: config.tls ? 1 : 0,
+    active: 1
+  });
 }
 
 // ─── TrendWave 多周期数值 ─────────────────────────────────────────────────────
@@ -631,14 +638,14 @@ export async function saveImapConfig(config: { email: string; password: string; 
  * 批量 upsert TrendWave Bull/Bear/Threshold 数值
  * 以 (symbol, timeframe, barTime) 为唯一键，重复推送时更新数值
  */
-export async function upsertTwValues(rows: InsertMt4TwValue[]): Promise<number> {
+export async function upsertTwValues(rows: any[]): Promise<number> {
   const db = await getDb();
   if (!db || rows.length === 0) return 0;
   let saved = 0;
   for (const row of rows) {
     try {
       await db.insert(mt4TwValues).values(row).onDuplicateKeyUpdate({
-        set: { bull: row.bull, bear: row.bear, threshold: row.threshold, pushedAt: new Date() }
+        set: { bull: row.bull, bear: row.bear, threshold: row.threshold, pushedAt: new Date().toISOString() }
       });
       saved++;
     } catch (e) {
@@ -685,14 +692,14 @@ export async function getLatestTwValues(timeframe: string) {
  * 批量 upsert TrendFollower 信号（buy/sell）
  * 以 (symbol, timeframe, barTime) 为唯一键
  */
-export async function upsertTfSignals(rows: InsertMt4TfSignal[]): Promise<number> {
+export async function upsertTfSignals(rows: any[]): Promise<number> {
   const db = await getDb();
   if (!db || rows.length === 0) return 0;
   let saved = 0;
   for (const row of rows) {
     try {
       await db.insert(mt4TfSignals).values(row).onDuplicateKeyUpdate({
-        set: { signal: row.signal, pushedAt: new Date() }
+        set: { signal: row.signal, pushedAt: new Date().toISOString() }
       });
       saved++;
     } catch (e) {
@@ -743,19 +750,20 @@ export async function getTradingConversations(userId: number) {
     .limit(200);
 }
 
-export async function createTradingConversation(data: InsertTradingConversation) {
+export async function createTradingConversation(data: any) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
-  const [result] = await db.insert(tradingConversations).values(data).$returningId();
-  const rows = await db.select().from(tradingConversations).where(eq(tradingConversations.id, result.id)).limit(1);
+  const result = await db.insert(tradingConversations).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(tradingConversations).where(eq(tradingConversations.id, insertId)).limit(1);
   return rows[0];
 }
 
-export async function updateTradingConversation(id: number, userId: number, data: Partial<InsertTradingConversation>) {
+export async function updateTradingConversation(id: number, userId: number, data: any) {
   const db = await getDb();
   if (!db) return;
   await db.update(tradingConversations)
-    .set({ ...data, updatedAt: new Date() })
+    .set({ ...data, updatedAt: new Date().toISOString() })
     .where(and(eq(tradingConversations.id, id), eq(tradingConversations.userId, userId)));
 }
 
@@ -777,13 +785,13 @@ export async function getNotifyConfig() {
 }
 
 /** 保存通知配置（upsert，始终维护 id=1 的单条记录） */
-export async function saveNotifyConfig(config: Omit<InsertNotifyConfig, "id" | "updatedAt">): Promise<void> {
+export async function saveNotifyConfig(config: any): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const existing = await db.select({ id: notifyConfig.id }).from(notifyConfig).limit(1);
   if (existing.length > 0) {
     await db.update(notifyConfig)
-      .set({ ...config, updatedAt: new Date() })
+      .set({ ...config, updatedAt: new Date().toISOString() })
       .where(eq(notifyConfig.id, existing[0].id));
   } else {
     await db.insert(notifyConfig).values({ ...config });
@@ -801,7 +809,7 @@ export async function getTvIdeaAnalysis(tvIdeaId: number) {
 }
 
 /** 保存交易想法分析结果 */
-export async function saveTvIdeaAnalysis(analysis: InsertTvIdeaAnalysis): Promise<void> {
+export async function saveTvIdeaAnalysis(analysis: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.insert(tvIdeaAnalyses).values(analysis).onDuplicateKeyUpdate({
@@ -812,7 +820,7 @@ export async function saveTvIdeaAnalysis(analysis: InsertTvIdeaAnalysis): Promis
       reasoning: analysis.reasoning,
       marketContext: analysis.marketContext,
       riskWarning: analysis.riskWarning,
-      notified: false,
+      notified: 0,
     },
   });
 }
@@ -821,7 +829,7 @@ export async function saveTvIdeaAnalysis(analysis: InsertTvIdeaAnalysis): Promis
 export async function markTvIdeaAnalysisNotified(tvIdeaId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(tvIdeaAnalyses).set({ notified: true }).where(eq(tvIdeaAnalyses.tvIdeaId, tvIdeaId));
+  await db.update(tvIdeaAnalyses).set({ notified: 1 }).where(eq(tvIdeaAnalyses.tvIdeaId, tvIdeaId));
 }
 
 /**
@@ -877,7 +885,7 @@ export async function saveCurrencyStrengthCache(data: {
     await db.insert(currencyStrengthCache).values({
       matrixJson: data.matrixJson,
       economicSummariesJson: data.economicSummariesJson ?? null,
-      generatedAt: new Date(),
+      generatedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error("[DB] Failed to save currency strength cache:", error);
@@ -888,34 +896,7 @@ export async function saveCurrencyStrengthCache(data: {
 
 // ─── TradingView 新闻 ─────────────────────────────────────────────────────────
 
-export async function getRecentTradingViewNews(limit = 10) {
-  const db = await getDb();
-  if (!db) return [];
-  try {
-    return await db.select().from(tradingviewNews)
-      .orderBy(desc(tradingviewNews.publishedAt))
-      .limit(limit);
-  } catch (error) {
-    console.error("[DB] Failed to get TradingView news:", error);
-    return [];
-  }
-}
-
-export async function saveTradingViewNews(data: InsertTradingViewNews): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  try {
-    await db.insert(tradingviewNews).values(data).onDuplicateKeyUpdate({
-      set: {
-        title: data.title,
-        description: data.description,
-        publishedAt: data.publishedAt,
-      }
-    });
-  } catch (error) {
-    console.error("[DB] Failed to save TradingView news:", error);
-  }
-}
+// TradingView news functions removed - table not in schema
 
 
 // ─── 交易信号 AI Prompt 配置 ──────────────────────────────────────────────────

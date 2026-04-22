@@ -1,7 +1,5 @@
 import { invokeLLM } from "./_core/llm";
 import { insertNewsItems, upsertInsight, upsertOutlook, getRecentNews, getAnalysisArticles, insertTvIdeas } from "./db";
-import type { InsertTvIdea } from "../drizzle/schema";
-import type { InsertNews } from "../drizzle/schema";
 
 const CURRENCIES = ["EUR", "USD", "JPY", "AUD", "GBP", "NZD", "CHF", "CAD"] as const;
 
@@ -30,8 +28,8 @@ async function fetchRSS(url: string): Promise<string> {
   return res.text();
 }
 
-function parseRSSItems(xml: string, source: "News" | "Analysis"): InsertNews[] {
-  const items: InsertNews[] = [];
+function parseRSSItems(xml: string, source: "News" | "Analysis"): any[] {
+  const items: any[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -310,8 +308,8 @@ const SYMBOL_TO_PAIR: Record<string, string> = {
   XAUUSD: "XAU/USD", XAGUSD: "XAG/USD",
 };
 
-function parseTvIdeas(xml: string): InsertTvIdea[] {
-  const items: InsertTvIdea[] = [];
+function parseTvIdeas(xml: string): any[] {
+  const items: any[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
