@@ -277,4 +277,72 @@ export function registerAdminRoutes(app: Express) {
     safeRunStrengthMatrix("manual").catch(console.error);
     res.json({ success: true, message: "Strength matrix generation triggered" });
   });
+
+  // Temporary: dedup mt4_bars migration endpoint
+  app.post("/api/admin/migrate-mt4-dedup", async (req, res) => {
+    const secret = req.headers["x-admin-secret"] || req.query.secret;
+    const adminSecret = process.env.ADMIN_SECRET || "fxstreet-admin-2026";
+    if (secret !== adminSecret) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+    try {
+      const { getDb } = await import("./db");
+      const db = await getDb();
+      if (!db) throw new Error("DB not available");
+      const { sql } = await import("drizzle-orm");
+      // Count before
+      const beforeRows = await db.execute(sql`SELECT COUNT(*) as cnt FROM mt4_bars`);
+      const beforeCount = (beforeRows as any)[0]?.[0]?.cnt ?? (beforeRows as any)[0]?.cnt ?? 'unknown';
+      console.log("[Migration] Before dedup:", beforeCount);
+      // Delete duplicates using subquery (TiDB compatible)
+      // Keep the row with MAX(id) for each (symbol, timeframe, barTime) group
+      await db.execute(sql`
+        DELETE b1 FROM mt4_bars b1
+        INNER JOIN mt4_bars b2
+        ON b1.symbol = b2.symbol
+          AND b1.timeframe = b2.timeframe
+          AND b1.barTime = b2.barTime
+          AND b1.id < b2.id
+      `);
+      // Count after
+      const afterRows = await db.execute(sql`SELECT COUNT(*) as cnt FROM mt4_bars`);
+      const afterCount = (afterRows as any)[0]?.[0]?.cnt ?? (afterRows as any)[0]?.cnt ?? 'unknown';
+      console.log("[Migration] After dedup:", afterCount);
+      res.json({ success: true, before: beforeCount, after: afterCount });
+    } catch (err: any) {
+      console.error("[Migration] Dedup failed:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Add unique constraint to mt4_bars
+  app.post("/api/admin/migrate-mt4-unique", async (req, res) => {
+    const secret = req.headers["x-admin-secret"] || req.query.secret;
+    const adminSecret = process.env.ADMIN_SECRET || "fxstreet-admin-2026";
+    if (secret !== adminSecret) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+    try {
+      const { getDb } = await import("./db");
+      const db = await getDb();
+      if (!db) throw new Error("DB not available");
+      const { sql } = await import("drizzle-orm");
+      // Drop old index if exists
+      try {
+        await db.execute(sql`ALTER TABLE mt4_bars DROP INDEX idx_symbol_bartime`);
+        console.log("[Migration] Dropped old index idx_symbol_bartime");
+      } catch (e) {
+        console.log("[Migration] Old index not found, skipping drop");
+      }
+      // Add unique constraint
+      await db.execute(sql`ALTER TABLE mt4_bars ADD UNIQUE KEY uniq_symbol_tf_bartime (symbol, timeframe, barTime)`);
+      console.log("[Migration] Added unique constraint uniq_symbol_tf_bartime");
+      res.json({ success: true, message: "Unique constraint added" });
+    } catch (err: any) {
+      console.error("[Migration] Add unique failed:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 }

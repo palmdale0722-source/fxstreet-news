@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, mysqlEnum, text, timestamp, varchar, index, longtext, date, boolean, tinyint } from "drizzle-orm/mysql-core"
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, mysqlEnum, text, timestamp, varchar, index, uniqueIndex, longtext, date, boolean, tinyint } from "drizzle-orm/mysql-core"
 import { sql } from "drizzle-orm"
 
 export const agentMessages = mysqlTable("agent_messages", {
@@ -83,7 +83,7 @@ export const mt4Bars = mysqlTable("mt4_bars", {
 	pushedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 },
 (table) => [
-	index("idx_symbol_bartime").on(table.symbol, table.barTime),
+	uniqueIndex("uniq_symbol_tf_bartime").on(table.symbol, table.timeframe, table.barTime),
 ]);
 
 export const mt4IndicatorConfigs = mysqlTable("mt4_indicator_configs", {

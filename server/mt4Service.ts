@@ -35,7 +35,7 @@ export interface Mt4PushPayload {
 
 /**
  * 接收并存储 MT4 推送的行情数据
- * 每个货币对保留最近 200 根 K 线
+ * 每个货币对保留最近 5000 根 K 线（约 52 天 M15 数据）
  * 优化：快速响应，异步处理清理任务
  */
 export async function saveMt4Bars(payload: Mt4PushPayload): Promise<{ inserted: number; symbols: string[] }> {
@@ -141,18 +141,18 @@ async function cleanupOldBars(symbols: string[]): Promise<void> {
 
   for (const symbol of symbols) {
     try {
-      // 找到第 200 根 K 线的 barTime
+      // 保留最近 5000 根 K 线（约 52 天的 M15 数据）
       const cutoffRows = await db
         .select({ barTime: mt4Bars.barTime })
         .from(mt4Bars)
         .where(eq(mt4Bars.symbol, symbol))
         .orderBy(desc(mt4Bars.barTime))
         .limit(1)
-        .offset(200);
+        .offset(5000);
 
       if (cutoffRows.length > 0) {
         const cutoffTime = cutoffRows[0].barTime;
-        // 删除超过 200 根的旧 K 线
+        // 删除超过 5000 根的旧 K 线
         await db
           .delete(mt4Bars)
           .where(and(eq(mt4Bars.symbol, symbol), sql`${mt4Bars.barTime} < ${cutoffTime}`));

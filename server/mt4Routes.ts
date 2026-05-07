@@ -333,7 +333,7 @@ export function registerMt4Routes(app: Express) {
   app.get("/api/mt4/tf/:symbol", async (req: Request, res: Response) => {
     const symbol = req.params.symbol.toUpperCase().replace("/", "");
     const timeframe = (req.query.timeframe as string) || "M15";
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit as string) || 200, 5000);
     try {
       const sigs = await getTfSignals(symbol, timeframe, limit);
       res.json({ success: true, symbol, timeframe, count: sigs.length, signals: sigs });
@@ -362,7 +362,7 @@ export function registerMt4Routes(app: Express) {
    */
   app.get("/api/mt4/bars/:symbol", async (req: Request, res: Response) => {
     const symbol = req.params.symbol.toUpperCase().replace("/", "");
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit as string) || 200, 5000);
     const timeframe = (req.query.timeframe as string) || "M15";
 
     if (!G8_SYMBOLS.includes(symbol)) {
