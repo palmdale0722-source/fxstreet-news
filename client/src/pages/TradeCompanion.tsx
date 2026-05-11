@@ -202,6 +202,8 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     onSuccess: (data) => {
       setCompanionId(data.id);
       setActiveTab("chart");
+      // Update URL to the companion detail page so user can bookmark/refresh
+      navigate(`/trade-companion/${data.id}`);
     },
   });
 
@@ -301,8 +303,8 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-2xl mx-auto px-4 py-8">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/signals")} className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" /> 返回交易信号
+          <Button variant="ghost" size="sm" onClick={() => navigate("/trade-companion")} className="mb-6 gap-2">
+            <ArrowLeft className="w-4 h-4" /> 返回伴飞列表
           </Button>
 
           <div className="mb-8">
@@ -407,8 +409,8 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
       {/* Header */}
       <div className="border-b border-border bg-card/50 sticky top-0 z-10 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/signals")} className="gap-2">
-            <ArrowLeft className="w-4 h-4" /> 返回
+          <Button variant="ghost" size="sm" onClick={() => navigate("/trade-companion")} className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> 返回伴飞列表
           </Button>
           <div className="flex items-center gap-3">
             <span className="font-bold text-lg">{symbol}</span>

@@ -12,6 +12,7 @@ import Agent from "./pages/Agent";
 import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
 import { TradeCompanion } from "./pages/TradeCompanion";
+import { TradeCompanionList } from "./pages/TradeCompanionList";
 
 function Router() {
   return (
@@ -24,7 +25,9 @@ function Router() {
       <Route path={"/ideas"} component={Ideas} />
       <Route path={"/my-system"} component={MySystem} />
       <Route path={"/my-ai"}>{() => { window.location.replace("/agent"); return null; }}</Route>
-      <Route path={"/trade-companion"}>{() => <TradeCompanion />}</Route>
+      {/* Trade Companion routes */}
+      <Route path={"/trade-companion"} component={TradeCompanionList} />
+      <Route path={"/trade-companion/new"}>{() => <TradeCompanion />}</Route>
       <Route path={"/trade-companion/:id"}>{(params: { id: string }) => <TradeCompanion companionId={parseInt(params.id)} />}</Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

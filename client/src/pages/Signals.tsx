@@ -478,7 +478,7 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
         {/* 交易伴飞入口 */}
         {isLoggedIn && (
           <div className="mt-3 pt-3 border-t border-border/40">
-            <Link href={`/trade-companion?signalId=${signal.id}`}>
+            <Link href={`/trade-companion/new?signalId=${signal.id}`}>
               <Button variant="outline" size="sm" className="gap-2 text-xs h-8 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors">
                 <Bot className="w-3.5 h-3.5" />
                 交易伴飞

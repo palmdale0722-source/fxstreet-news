@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, userId, symbol, direction, entryPrice, status, created_at FROM trade_companions ORDER BY created_at DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT id, userId, symbol, direction, entryPrice, status, created_at FROM trade_companions ORDER BY created_at DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "2",
+      "userId": "1",
+      "symbol": "EUR/USD",
+      "direction": "buy",
+      "entryPrice": "1.08500",
+      "status": "active",
+      "created_at": "2026-05-11 16:43:06"
+    },
+    {
+      "id": "1",
+      "userId": "1",
+      "symbol": "EUR/USD",
+      "direction": "buy",
+      "entryPrice": "1.17823",
+      "status": "active",
+      "created_at": "2026-05-11 16:03:19"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tsymbol\tdirection\tentryPrice\tstatus\tcreated_at\n2\t1\tEUR/USD\tbuy\t1.08500\tactive\t2026-05-11 16:43:06\n1\t1\tEUR/USD\tbuy\t1.17823\tactive\t2026-05-11 16:03:19\n",
+  "stderr": "",
+  "execution_time_ms": 1866
+}
