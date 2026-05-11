@@ -388,3 +388,50 @@ export const systemHealthReports = mysqlTable("system_health_reports", {
 
 export type SystemHealthReport = typeof systemHealthReports.$inferSelect;
 export type InsertSystemHealthReport = typeof systemHealthReports.$inferInsert;
+
+// 交易伴飞记录表
+export const tradeCompanions = mysqlTable("trade_companions", {
+  id: int().autoincrement().notNull(),
+  userId: int().notNull(),
+  symbol: varchar({ length: 16 }).notNull(),
+  direction: mysqlEnum(['buy', 'sell']).notNull(),
+  entryPrice: varchar({ length: 32 }).notNull(),
+  stopLoss: varchar({ length: 32 }),
+  takeProfit: varchar({ length: 32 }),
+  tradeRationale: text(),
+  scenariosJson: text("scenarios_json"),
+  scenariosGeneratedAt: timestamp("scenarios_generated_at", { mode: 'string' }),
+  exitPrice: varchar({ length: 32 }),
+  exitRationale: text("exit_rationale"),
+  lessonsLearned: text("lessons_learned"),
+  pnlPips: varchar({ length: 32 }),
+  pnlPercent: varchar({ length: 32 }),
+  reviewedAt: timestamp("reviewed_at", { mode: 'string' }),
+  signalId: int("signal_id"),
+  status: mysqlEnum(['active', 'closed', 'cancelled']).default('active').notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("tc_userId_idx").on(table.userId),
+  index("tc_symbol_idx").on(table.symbol),
+  index("tc_status_idx").on(table.status),
+]);
+
+export type TradeCompanion = typeof tradeCompanions.$inferSelect;
+export type InsertTradeCompanion = typeof tradeCompanions.$inferInsert;
+
+// 交易伴飞 AI 对话消息表
+export const tradeCompanionMessages = mysqlTable("trade_companion_messages", {
+  id: int().autoincrement().notNull(),
+  companionId: int("companion_id").notNull(),
+  role: mysqlEnum(['user', 'assistant']).notNull(),
+  content: text().notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("tcm_companionId_idx").on(table.companionId),
+]);
+
+export type TradeCompanionMessage = typeof tradeCompanionMessages.$inferSelect;
+export type InsertTradeCompanionMessage = typeof tradeCompanionMessages.$inferInsert;

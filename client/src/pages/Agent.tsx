@@ -538,7 +538,7 @@ export default function Agent() {
         id: m.id,
         role: m.role,
         content: m.content,
-        createdAt: m.createdAt,
+        createdAt: new Date(m.createdAt as any),
       })));
     } else if (activeSessionId) {
       setMessages([]);
@@ -757,7 +757,7 @@ export default function Agent() {
             </div>
           ) : (
             <div className="space-y-1 py-2">
-              {(sessions as Session[]).map((session) => (
+              {((sessions ?? []) as any[]).map((session: any) => (
                 <div
                   key={session.id}
                   className={`group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
@@ -921,7 +921,7 @@ export default function Agent() {
           <>
             {/* 对话顶部栏 */}
             <ChatHeader
-              sessionTitle={(sessions as Session[]).find(s => s.id === activeSessionId)?.title || "AI 分析师"}
+              sessionTitle={((sessions ?? []) as any[]).find(s => s.id === activeSessionId)?.title || "AI 分析师"}
               selectedPair={selectedPair}
               showPairSelector={showPairSelector}
               setShowPairSelector={setShowPairSelector}

@@ -11,6 +11,7 @@ import SystemHealth from "./pages/SystemHealth";
 import Agent from "./pages/Agent";
 import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
+import { TradeCompanion } from "./pages/TradeCompanion";
 
 function Router() {
   return (
@@ -23,6 +24,8 @@ function Router() {
       <Route path={"/ideas"} component={Ideas} />
       <Route path={"/my-system"} component={MySystem} />
       <Route path={"/my-ai"}>{() => { window.location.replace("/agent"); return null; }}</Route>
+      <Route path={"/trade-companion"}>{() => <TradeCompanion />}</Route>
+      <Route path={"/trade-companion/:id"}>{(params: { id: string }) => <TradeCompanion companionId={parseInt(params.id)} />}</Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

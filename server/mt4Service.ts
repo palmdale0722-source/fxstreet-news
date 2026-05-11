@@ -284,7 +284,7 @@ export function aggregateBars(m15Bars: any[], targetTf: 'H1' | 'H4' | 'D1'): any
 
   // 聚合每个时间槽
   const aggregated: any[] = [];
-  for (const [slotKey, bars] of groups.entries()) {
+  for (const [slotKey, bars] of Array.from(groups.entries())) {
     if (bars.length === 0) continue;
     const open = bars[0].open;
     const close = bars[bars.length - 1].close;

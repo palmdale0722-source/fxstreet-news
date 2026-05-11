@@ -4,7 +4,7 @@ import { getLoginUrl } from "@/const";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  TrendingUp, TrendingDown, Minus, Globe, Zap, BarChart2,
+  TrendingUp, TrendingDown, Minus, Globe, Zap, BarChart2, Bot,
   DollarSign, Clock, ExternalLink, Mail, LogIn, LogOut,
   RefreshCw, AlertTriangle, Lightbulb, CheckCircle2,
   Newspaper, FileText, BrainCircuit, Signal, BookOpen,
@@ -240,6 +240,10 @@ function Navbar({ user, loading, logout, isPendingUpdate }: { user: any; loading
           <Link href="/my-system" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
             style={{ background: "oklch(0.45 0.15 300 / 0.15)", color: "oklch(0.68 0.15 300)", border: "1px solid oklch(0.45 0.15 300 / 0.30)" }}>
             <BookOpen className="w-3.5 h-3.5" />交易体系
+          </Link>
+          <Link href="/trade-companion" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:opacity-90"
+            style={{ background: "oklch(0.55 0.14 80 / 0.15)", color: "oklch(0.72 0.14 80)", border: "1px solid oklch(0.55 0.14 80 / 0.30)" }}>
+            <Bot className="w-3.5 h-3.5" />交易伴飞
           </Link>
           {loading ? <Skeleton className="h-8 w-20" /> : user ? (
             <div className="flex items-center gap-2">

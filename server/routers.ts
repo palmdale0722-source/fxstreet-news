@@ -62,6 +62,15 @@ import { fetchSignalEmails } from "./imapService";
 import { restartImapJobs, safeRunStrengthMatrix, safeRunHealthCheck } from "./cronJobs";
 import { getHealthReports } from "./systemHealthCheck";
 import { invokeLLM } from "./_core/llm";
+import {
+  createTradeCompanion,
+  getTradeCompanions,
+  getTradeCompanion,
+  updateTradeCompanion,
+  deleteTradeCompanion,
+  saveCompanionMessage,
+  getCompanionMessages,
+} from "./tradeCompanionService";
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
 import { getCurrencyStrengthCache } from "./db";
@@ -1228,6 +1237,352 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
             lastActivityAt?: string | null;
           }>,
         }));
+      }),
+  }),
+
+  // ─── 交易伴飞 ─────────────────────────────────────────────────────────────
+  tradeCompanion: router({
+    // 创建新的伴飞记录
+    create: protectedProcedure
+      .input(z.object({
+        symbol: z.string().min(1).max(16),
+        direction: z.enum(["buy", "sell"]),
+        entryPrice: z.string().min(1),
+        stopLoss: z.string().optional(),
+        takeProfit: z.string().optional(),
+        tradeRationale: z.string().optional(),
+        signalId: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const id = await createTradeCompanion({
+          userId: ctx.user.id,
+          symbol: input.symbol,
+          direction: input.direction,
+          entryPrice: input.entryPrice,
+          stopLoss: input.stopLoss ?? null,
+          takeProfit: input.takeProfit ?? null,
+          tradeRationale: input.tradeRationale ?? null,
+          signalId: input.signalId ?? null,
+          status: "active",
+        });
+        return { id };
+      }),
+
+    // 获取列表
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        return getTradeCompanions(ctx.user.id, input?.limit ?? 20, input?.offset ?? 0);
+      }),
+
+    // 获取单条
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const companion = await getTradeCompanion(input.id, ctx.user.id);
+        if (!companion) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return companion;
+      }),
+
+    // 更新伴飞记录（通用）
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        stopLoss: z.string().optional(),
+        takeProfit: z.string().optional(),
+        tradeRationale: z.string().optional(),
+        status: z.enum(["active", "closed", "cancelled"]).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        const ok = await updateTradeCompanion(id, ctx.user.id, data as any);
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return { success: true };
+      }),
+
+    // 复盘出场
+    review: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        exitPrice: z.string().min(1),
+        exitRationale: z.string().optional(),
+        lessonsLearned: z.string().optional(),
+        pnlPips: z.string().optional(),
+        pnlPercent: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, exitPrice, exitRationale, lessonsLearned, pnlPips, pnlPercent } = input;
+        const ok = await updateTradeCompanion(id, ctx.user.id, {
+          exitPrice,
+          exitRationale: exitRationale ?? null,
+          lessonsLearned: lessonsLearned ?? null,
+          pnlPips: pnlPips ?? null,
+          pnlPercent: pnlPercent ?? null,
+          reviewedAt: new Date().toISOString(),
+          status: "closed",
+        });
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return { success: true };
+      }),
+
+    // 删除
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const ok = await deleteTradeCompanion(input.id, ctx.user.id);
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return { success: true };
+      }),
+
+    // 生成情景规划（AI）
+    generateScenarios: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const companion = await getTradeCompanion(input.id, ctx.user.id);
+        if (!companion) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+
+        // 获取 MT4 K 线数据（M15 + H1 + H4）
+        const symbol = companion.symbol.replace("/", "");
+        const { getMt4BarsWithTf } = await import("./mt4Service");
+        const [barsM15, barsH1, barsH4] = await Promise.all([
+          getMt4BarsWithTf(symbol, "M15", 96),
+          getMt4BarsWithTf(symbol, "H1", 48),
+          getMt4BarsWithTf(symbol, "H4", 20),
+        ]);
+
+        // 构建 K 线摘要
+        const formatBars = (bars: typeof barsM15, tf: string, count: number) => {
+          if (!bars.length) return `${tf}: 无数据`;
+          const recent = bars.slice(0, count);
+          const latest = recent[0];
+          const oldest = recent[recent.length - 1];
+          const highs = recent.map(b => parseFloat(b.high));
+          const lows = recent.map(b => parseFloat(b.low));
+          return `${tf}（最近${count}根）: 最新=${latest.close} 开=${oldest.open} 高=${Math.max(...highs).toFixed(5)} 低=${Math.min(...lows).toFixed(5)} 时间=${latest.barTime}`;
+        };
+
+        const klineContext = [
+          formatBars(barsM15, "M15", 20),
+          formatBars(barsH1, "H1", 24),
+          formatBars(barsH4, "H4", 10),
+        ].join("\n");
+
+        // 获取新闻上下文
+        const newsCtx = await getNewsContextForAgent(10);
+        const newsText = newsCtx.slice(0, 5).map((n: any, i: number) =>
+          `${i+1}. ${n.title} (${new Date(n.publishedAt).toLocaleDateString("zh-CN")})`
+        ).join("\n");
+
+        const prompt = `你是一位专业的外汇交易分析师。请根据以下交易信息，从乐观、中性、悲观三个维度进行情景规划，并为每个情景提出具体的交易建议。
+
+【交易信息】
+品种: ${companion.symbol}
+方向: ${companion.direction === "buy" ? "买入（做多）" : "卖出（做空）"}
+入场价格: ${companion.entryPrice}
+${companion.stopLoss ? `止损: ${companion.stopLoss}` : ""}
+${companion.takeProfit ? `止盈: ${companion.takeProfit}` : ""}
+${companion.tradeRationale ? `交易依据: ${companion.tradeRationale}` : ""}
+
+【K线数据摘要】
+${klineContext}
+
+【最新相关新闻】
+${newsText}
+
+请按以下格式输出JSON（不要有其他文字）：
+{
+  "optimistic": {
+    "title": "乐观情景标题",
+    "probability": "概率估计（如30%）",
+    "description": "情景描述（2-3句）",
+    "keyLevels": { "target": "目标价位", "support": "关键支撑" },
+    "action": "具体操作建议",
+    "trigger": "触发条件"
+  },
+  "neutral": {
+    "title": "中性情景标题",
+    "probability": "概率估计",
+    "description": "情景描述",
+    "keyLevels": { "target": "目标价位", "support": "关键支撑" },
+    "action": "具体操作建议",
+    "trigger": "触发条件"
+  },
+  "pessimistic": {
+    "title": "悲观情景标题",
+    "probability": "概率估计",
+    "description": "情景描述",
+    "keyLevels": { "stopLoss": "止损位", "resistance": "关键阻力" },
+    "action": "具体操作建议（含止损策略）",
+    "trigger": "触发条件"
+  },
+  "summary": "综合判断（1-2句）"
+}`;
+
+        // 规范化 API URL
+        let apiUrl = input.apiUrl.trim().replace(/\/$/, "");
+        if (!apiUrl.endsWith("/chat/completions")) {
+          if (apiUrl.endsWith("/v1")) apiUrl += "/chat/completions";
+          else if (!apiUrl.includes("/v1")) apiUrl += "/v1/chat/completions";
+          else apiUrl += "/chat/completions";
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        let scenariosJson: string;
+        try {
+          const resp = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${input.apiKey}` },
+            body: JSON.stringify({
+              model: input.model,
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.7,
+              max_tokens: 2000,
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => "");
+            throw new TRPCError({ code: "BAD_REQUEST", message: `AI API 错误 (${resp.status}): ${errText.slice(0, 200)}` });
+          }
+          const data = await resp.json() as any;
+          scenariosJson = data.choices?.[0]?.message?.content ?? "{}";
+          // 清理 markdown 代码块
+          scenariosJson = scenariosJson.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+        } catch (err) {
+          clearTimeout(timeoutId);
+          throw new TRPCError({ code: "BAD_REQUEST", message: `情景规划生成失败: ${err instanceof Error ? err.message : String(err)}` });
+        }
+
+        // 保存到数据库
+        await updateTradeCompanion(input.id, ctx.user.id, {
+          scenariosJson,
+          scenariosGeneratedAt: new Date().toISOString(),
+        });
+
+        return { scenarios: JSON.parse(scenariosJson) };
+      }),
+
+    // 获取对话消息
+    getMessages: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        // 验证权限
+        const companion = await getTradeCompanion(input.id, ctx.user.id);
+        if (!companion) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return getCompanionMessages(input.id);
+      }),
+
+    // AI 对话（基于交易上下文）
+    chat: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        message: z.string().min(1).max(2000),
+        apiUrl: z.string().url(),
+        apiKey: z.string().min(1),
+        model: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const companion = await getTradeCompanion(input.id, ctx.user.id);
+        if (!companion) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+
+        // 保存用户消息
+        await saveCompanionMessage({ companionId: input.id, role: "user", content: input.message });
+
+        // 获取历史消息（最近 10 条）
+        const history = await getCompanionMessages(input.id);
+        const recentHistory = history.slice(-10);
+
+        // 获取 MT4 K 线数据
+        const symbol = companion.symbol.replace("/", "");
+        const { getMt4BarsWithTf } = await import("./mt4Service");
+        const mt4Bars = await getMt4BarsWithTf(symbol, "M15", 50);
+        const klineContext = mt4Bars.length > 0
+          ? formatMt4BarsForPrompt(companion.symbol, mt4Bars)
+          : `${companion.symbol}: 暂无 MT4 数据`;
+
+        // 获取新闻上下文
+        const newsCtx = await getNewsContextForAgent(10);
+        const newsText = newsCtx.slice(0, 5).map((n: any, i: number) =>
+          `${i+1}. ${n.title} (${new Date(n.publishedAt).toLocaleDateString("zh-CN")})`
+        ).join("\n");
+
+        // 情景规划上下文
+        let scenarioContext = "";
+        if (companion.scenariosJson) {
+          try {
+            const scenarios = JSON.parse(companion.scenariosJson);
+            scenarioContext = `\n【已生成的情景规划】\n乐观: ${scenarios.optimistic?.title} - ${scenarios.optimistic?.description}\n中性: ${scenarios.neutral?.title} - ${scenarios.neutral?.description}\n悲观: ${scenarios.pessimistic?.title} - ${scenarios.pessimistic?.description}`;
+          } catch {}
+        }
+
+        const systemPrompt = `你是一位专业的外汇交易分析师，正在陪伴用户分析一笔具体的交易。
+
+【当前交易信息】
+品种: ${companion.symbol}
+方向: ${companion.direction === "buy" ? "买入（做多）" : "卖出（做空）"}
+入场价格: ${companion.entryPrice}
+${companion.stopLoss ? `止损: ${companion.stopLoss}` : ""}
+${companion.takeProfit ? `止盈: ${companion.takeProfit}` : ""}
+${companion.tradeRationale ? `交易依据: ${companion.tradeRationale}` : ""}
+状态: ${companion.status === "active" ? "持仓中" : companion.status === "closed" ? "已平仓" : "已取消"}
+${scenarioContext}
+
+【实时 K 线数据】
+${klineContext}
+
+【最新相关新闻】
+${newsText}
+
+请基于以上信息，专注于这笔交易的分析。回答要具体、实用，给出明确的操作建议。使用中文回答。`;
+
+        const llmMessages = [
+          { role: "system" as const, content: systemPrompt },
+          ...recentHistory.slice(0, -1).map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content })),
+          { role: "user" as const, content: input.message },
+        ];
+
+        // 规范化 API URL
+        let apiUrl = input.apiUrl.trim().replace(/\/$/, "");
+        if (!apiUrl.endsWith("/chat/completions")) {
+          if (apiUrl.endsWith("/v1")) apiUrl += "/chat/completions";
+          else if (!apiUrl.includes("/v1")) apiUrl += "/v1/chat/completions";
+          else apiUrl += "/chat/completions";
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        let assistantContent: string;
+        try {
+          const resp = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${input.apiKey}` },
+            body: JSON.stringify({ model: input.model, messages: llmMessages, temperature: 0.7, max_tokens: 4096 }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => "");
+            throw new TRPCError({ code: "BAD_REQUEST", message: `AI API 错误 (${resp.status}): ${errText.slice(0, 200)}` });
+          }
+          const data = await resp.json() as any;
+          const raw = data.choices?.[0]?.message?.content;
+          assistantContent = typeof raw === "string" ? raw : (raw ? JSON.stringify(raw) : "暂无回复");
+        } catch (err) {
+          clearTimeout(timeoutId);
+          throw new TRPCError({ code: "BAD_REQUEST", message: `AI 对话失败: ${err instanceof Error ? err.message : String(err)}` });
+        }
+
+        // 保存 AI 回复
+        await saveCompanionMessage({ companionId: input.id, role: "assistant", content: assistantContent });
+
+        return { content: assistantContent };
       }),
   }),
 

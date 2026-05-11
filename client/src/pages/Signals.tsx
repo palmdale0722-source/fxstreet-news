@@ -429,7 +429,7 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
               )}
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {new Date(typeof signal.receivedAt === 'string' && !signal.receivedAt.endsWith('Z') ? signal.receivedAt + 'Z' : signal.receivedAt).toLocaleString("zh-CN", {
+                {new Date(String(signal.receivedAt ?? '').endsWith('Z') ? String(signal.receivedAt) : String(signal.receivedAt ?? '') + 'Z').toLocaleString("zh-CN", {
                   timeZone: "Asia/Shanghai",
                   month: "short", day: "numeric",
                   hour: "2-digit", minute: "2-digit"
@@ -474,6 +474,18 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
 
         {/* 备注区 */}
         <NotesSection signalId={signal.id} isLoggedIn={isLoggedIn} />
+
+        {/* 交易伴飞入口 */}
+        {isLoggedIn && (
+          <div className="mt-3 pt-3 border-t border-border/40">
+            <Link href={`/trade-companion?signalId=${signal.id}`}>
+              <Button variant="outline" size="sm" className="gap-2 text-xs h-8 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors">
+                <Bot className="w-3.5 h-3.5" />
+                交易伴飞
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

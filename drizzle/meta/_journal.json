@@ -78,6 +78,13 @@
       "when": 1776253624477,
       "tag": "0010_create_signal_ai_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1778511172118,
+      "tag": "0011_tranquil_the_captain",
+      "breakpoints": true
     }
   ]
 }

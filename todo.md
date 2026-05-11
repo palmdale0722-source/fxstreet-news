@@ -322,3 +322,19 @@
 - [x] 验证 AUDNZD 数据在数据库中存在（6 条记录，最新时间 2026-04-22T09:15:00 UTC）
 - [ ] 调查 agent.getQuote 返回 null 的原因（getMt4Bars 查询问题）
 - [ ] 验证 AI 分析师是否能正确显示最新的 MT4 K 线数据
+
+## 交易伴飞功能
+- [x] 数据库：新增 trade_companions 表（存储伴飞记录：品种/方向/入场价/依据/情景规划/复盘信息）
+- [x] 后端：tRPC tradeCompanion.create（创建伴飞记录）
+- [x] 后端：tRPC tradeCompanion.list（列表，支持分页）
+- [x] 后端：tRPC tradeCompanion.get（获取单条记录）
+- [x] 后端：tRPC tradeCompanion.update（更新记录，含复盘信息）
+- [x] 后端：tRPC tradeCompanion.generateScenarios（AI 生成三情景规划）
+- [x] 后端：tRPC tradeCompanion.chat（AI 对话，接入现有分析师上下文）
+- [x] 前端：安装 lightweight-charts 依赖
+- [x] 前端：K 线图组件（从 MT4 数据渲染，支持 M15/H1/H4 切换）
+- [x] 前端：/trade-companion/:id 独立页面（四大模块：K 线图、情景规划、AI 对话、复盘记录）
+- [x] 前端：/trade-companion/new 新建伴飞页面（手动输入品种/方向/价格/依据）
+- [x] 前端：交易信号列表添加"交易伴飞"按钮，点击跳转并预填信息
+- [x] 前端：导航栏添加"交易伴飞"入口
+- [ ] 测试：验证 K 线图渲染、情景规划生成、AI 对话、复盘计算
