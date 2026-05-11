@@ -338,3 +338,12 @@
 - [x] 前端：交易信号列表添加"交易伴飞"按钮，点击跳转并预填信息
 - [x] 前端：导航栏添加"交易伴飞"入口
 - [ ] 测试：验证 K 线图渲染、情景规划生成、AI 对话、复盘计算
+
+## K线图自定义指标
+- [x] 实现指标计算工具函数 indicators.ts（AMA、Supertrend、TrendWave、MACD）
+- [x] 升级 CandlestickChart：主图叠加 AMA 均线（琥珀色线）和 Supertrend（蓝/红线）
+- [x] 升级 CandlestickChart：添加 TrendWave 副图（绿线=Bull、红线=Bear，信号点）
+- [x] 升级 CandlestickChart：添加 MACD 副图（标准 12/26/9）
+- [x] 指标开关按钮（AMA/ST/TW/MACD 可独立切换）
+- [x] 多图表时间轴同步（主图与副图联动）
+- [x] 浏览器验证：指标显示效果正确
