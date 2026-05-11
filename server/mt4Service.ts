@@ -248,3 +248,92 @@ export function formatMt4BarsForPrompt(pair: string, bars: any[]): string {
 
   return `${pair} MT4 M15 K线（最近20根）:\n${barLines}`;
 }
+
+/**
+ * 将 M15 K 线聚合为指定时间周期
+ * @param m15Bars - M15 K 线数组（按时间倒序）
+ * @param targetTf - 目标时间周期：'H1' | 'H4' | 'D1'
+ * @returns 聚合后的 K 线数组（按时间倒序）
+ */
+export function aggregateBars(m15Bars: any[], targetTf: 'H1' | 'H4' | 'D1'): any[] {
+  if (!m15Bars || m15Bars.length === 0) return [];
+
+  // 每个目标周期包含的 M15 K 线数量
+  const M15_PER_TF: Record<string, number> = {
+    H1: 4,
+    H4: 16,
+    D1: 96,
+  };
+  const barsPerCandle = M15_PER_TF[targetTf];
+  if (!barsPerCandle) return [];
+
+  // 将 M15 K 线按时间正序排列
+  const sorted = [...m15Bars].sort(
+    (a, b) => new Date(a.barTime).getTime() - new Date(b.barTime).getTime()
+  );
+
+  // 按目标周期的时间槽分组
+  const groups = new Map<number, any[]>();
+  for (const bar of sorted) {
+    const ts = new Date(bar.barTime).getTime();
+    const slotMs = barsPerCandle * 15 * 60 * 1000;
+    const slotKey = Math.floor(ts / slotMs) * slotMs;
+    if (!groups.has(slotKey)) groups.set(slotKey, []);
+    groups.get(slotKey)!.push(bar);
+  }
+
+  // 聚合每个时间槽
+  const aggregated: any[] = [];
+  for (const [slotKey, bars] of groups.entries()) {
+    if (bars.length === 0) continue;
+    const open = bars[0].open;
+    const close = bars[bars.length - 1].close;
+    const high = bars.reduce((max: number, b: any) => Math.max(max, parseFloat(b.high)), -Infinity).toFixed(5);
+    const low = bars.reduce((min: number, b: any) => Math.min(min, parseFloat(b.low)), Infinity).toFixed(5);
+    const volume = bars.reduce((sum: number, b: any) => sum + parseFloat(b.volume || '0'), 0).toFixed(0);
+    const spread = Math.round(bars.reduce((sum: number, b: any) => sum + (b.spread || 0), 0) / bars.length);
+    aggregated.push({
+      id: null,
+      symbol: bars[0].symbol,
+      timeframe: targetTf,
+      barTime: new Date(slotKey).toISOString().slice(0, 19).replace('T', ' '),
+      open,
+      high,
+      low,
+      close,
+      volume,
+      spread,
+      pushedAt: bars[bars.length - 1].pushedAt,
+      m15Count: bars.length, // 该聚合 K 线包含的 M15 数量（满足 barsPerCandle 才是完整 K 线）
+    });
+  }
+
+  // 按时间倒序返回，过滤掉不完整的最新 K 线（当前未收盘的 K 线）
+  return aggregated
+    .sort((a, b) => new Date(b.barTime).getTime() - new Date(a.barTime).getTime());
+}
+
+/**
+ * 获取指定货币对的 K 线（支持 M15/H1/H4/D1）
+ * H1/H4/D1 由 M15 数据实时聚合生成
+ */
+export async function getMt4BarsWithTf(
+  symbol: string,
+  timeframe: 'M15' | 'H1' | 'H4' | 'D1' = 'M15',
+  limit: number = 100
+): Promise<any[]> {
+  if (timeframe === 'M15') {
+    return getMt4Bars(symbol, limit);
+  }
+
+  // 对于 H1/H4/D1，先拉取足够多的 M15 数据再聚合
+  const M15_NEEDED: Record<string, number> = {
+    H1: limit * 4 + 4,
+    H4: limit * 16 + 16,
+    D1: limit * 96 + 96,
+  };
+  const m15Limit = Math.min(M15_NEEDED[timeframe] || limit * 16, 5000);
+  const m15Bars = await getMt4Bars(symbol, m15Limit);
+  const aggregated = aggregateBars(m15Bars, timeframe as 'H1' | 'H4' | 'D1');
+  return aggregated.slice(0, limit);
+}

@@ -6,7 +6,7 @@
  * GET  /api/mt4/bars/:symbol  - 查询指定货币对的 K 线数据
  */
 import type { Express, Request, Response } from "express";
-import { saveMt4Bars, getMt4Bars, getMt4ConnectionStatus, G8_SYMBOLS, type Mt4PushPayload } from "./mt4Service";
+import { saveMt4Bars, getMt4Bars, getMt4BarsWithTf, getMt4ConnectionStatus, G8_SYMBOLS, type Mt4PushPayload } from "./mt4Service";
 import { upsertIndicatorSignal, upsertTwValues, upsertTfSignals, getTwValues, getTfSignals } from "./db";
 
 // MT4 API 密钥（用于 EA 鉴权）
@@ -358,20 +358,26 @@ export function registerMt4Routes(app: Express) {
 
   /**
    * GET /api/mt4/bars/:symbol
-   * 查询指定货币对的最新 K 线（供调试用）
+   * 查询指定货币对的最新 K 线，支持 M15/H1/H4/D1 时间周期
+   * H1/H4/D1 由 M15 数据实时聚合生成，无需 MT4 额外推送
+   * Query params:
+   *   timeframe - M15（默认）| H1 | H4 | D1
+   *   limit     - 返回 K 线数量（默认 200，最大 5000）
    */
   app.get("/api/mt4/bars/:symbol", async (req: Request, res: Response) => {
     const symbol = req.params.symbol.toUpperCase().replace("/", "");
     const limit = Math.min(parseInt(req.query.limit as string) || 200, 5000);
-    const timeframe = (req.query.timeframe as string) || "M15";
+    const rawTf = ((req.query.timeframe as string) || "M15").toUpperCase();
+    const validTf = ['M15', 'H1', 'H4', 'D1'];
+    const timeframe = validTf.includes(rawTf) ? rawTf as 'M15' | 'H1' | 'H4' | 'D1' : 'M15';
 
     if (!G8_SYMBOLS.includes(symbol)) {
-      res.status(400).json({ success: false, message: `Unknown symbol: ${symbol}` });
+      res.status(400).json({ success: false, message: `Unknown symbol: ${symbol}. Valid symbols: ${G8_SYMBOLS.join(', ')}` });
       return;
     }
 
     try {
-      const bars = await getMt4Bars(symbol, limit);
+      const bars = await getMt4BarsWithTf(symbol, timeframe, limit);
       res.json({ success: true, symbol, timeframe, count: bars.length, bars });
     } catch (err) {
       console.error("[MT4] Bars query error:", err);
