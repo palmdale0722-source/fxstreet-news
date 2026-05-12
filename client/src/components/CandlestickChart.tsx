@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   createChart,
   ColorType,
@@ -26,6 +26,7 @@ interface CandlestickChartProps {
   mainHeight?: number;
   height?: number; // alias for mainHeight (backward compat)
   showIndicators?: boolean;
+  containerRef?: RefObject<HTMLDivElement | null>;
 }
 
 const TIMEFRAMES: { label: string; value: Timeframe }[] = [
@@ -69,6 +70,7 @@ export function CandlestickChart({
   mainHeight: mainHeightProp = 360,
   height,
   showIndicators = true,
+  containerRef,
 }: CandlestickChartProps) {
   const mainRef = useRef<HTMLDivElement>(null);
   const trendwaveRef = useRef<HTMLDivElement>(null);
@@ -397,7 +399,7 @@ export function CandlestickChart({
   }, [bars, entryPrice, stopLoss, takeProfit, mainHeight, showAMA, showSupertrend, showTrendWave, showMACD, showIndicators]);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1" ref={containerRef}>
       {/* Toolbar */}
       <div className="flex items-center gap-1 flex-wrap">
         {TIMEFRAMES.map(tf => (

@@ -356,3 +356,11 @@
 - [x] 注册 /trade-companion（列表）和 /trade-companion/new（新建）路由
 - [x] 新建伴飞成功后 URL 自动更新为 /trade-companion/:id（支持刷新/书签）
 - [x] 修复交易信号页"交易伴飞"按钮链接到 /trade-companion/new
+
+## AI 对话接入 K 线图视觉输入
+- [x] 安装 html2canvas，前端截取 K 线图容器为 base64 图像
+- [x] CandlestickChart 暴露容器 ref 给父组件
+- [x] handleSendChat 截图后将 base64 传给后端 chat 接口
+- [x] 后端 chat 接口：接收 base64，上传 S3，在 AI messages 中附加 image_url
+- [x] AI 系统提示更新：告知 AI 已收到 K 线图截图
+- [x] 前端显示"每次对话自动附加当前 K 线图截图供 AI 分析"提示

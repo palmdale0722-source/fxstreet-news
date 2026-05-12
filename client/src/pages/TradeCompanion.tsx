@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { ArrowLeft, TrendingUp, TrendingDown, Bot, BookOpen, BarChart2, Send, Loader2, AlertTriangle, CheckCircle2, MinusCircle, ChevronRight } from "lucide-react";
 import { Streamdown } from "streamdown";
+import html2canvas from "html2canvas";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,7 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Review state
   const [exitPrice, setExitPrice] = useState("");
@@ -259,6 +261,24 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     }
   };
 
+  // Capture K-line chart as base64 PNG
+  const captureChartImage = async (): Promise<string | null> => {
+    if (!chartContainerRef.current) return null;
+    try {
+      const canvas = await html2canvas(chartContainerRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+      });
+      return canvas.toDataURL("image/png");
+    } catch (e) {
+      console.warn("[TradeCompanion] Chart capture failed:", e);
+      return null;
+    }
+  };
+
   const handleSendChat = async () => {
     if (!chatInput.trim() || !companionId || !isApiConfigured || chatSending) return;
     const userMsg = chatInput.trim();
@@ -266,12 +286,15 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     setChatMessages(prev => [...prev, { role: "user", content: userMsg }]);
     setChatSending(true);
     try {
+      // Capture chart screenshot to give AI visual context
+      const chartImageBase64 = await captureChartImage();
       const result = await utils.client.tradeCompanion.chat.mutate({
         id: companionId,
         message: userMsg,
         apiUrl: apiConfig.apiUrl,
         apiKey: apiConfig.apiKey,
         model: apiConfig.model,
+        ...(chartImageBase64 ? { chartImageBase64 } : {}),
       });
       setChatMessages(prev => [...prev, { role: "assistant", content: result.content }]);
     } catch (err: any) {
@@ -460,6 +483,7 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
                   takeProfit={takeProfit ? parseFloat(takeProfit) : undefined}
                   direction={direction}
                   height={480}
+                  containerRef={chartContainerRef}
                 />
                 {tradeRationale && (
                   <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm">
@@ -550,7 +574,7 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
                   <div className="text-center py-12 text-muted-foreground">
                     <Bot className="w-12 h-12 mx-auto mb-4 opacity-30" />
                     <p className="text-sm">AI 分析师已准备好，可以开始对话</p>
-                    <p className="text-xs mt-1">AI 已了解你的交易信息，可以直接提问</p>
+                    <p className="text-xs mt-1">每次发送消息时，AI 会自动查看当前 K 线图</p>
                   </div>
                 )}
                 {chatMessages.map((msg, i) => (
@@ -589,29 +613,35 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
               </div>
 
               {/* Input */}
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="询问 AI 分析师关于这笔交易的任何问题..."
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendChat();
-                    }
-                  }}
-                  rows={2}
-                  className="resize-none"
-                  disabled={!isApiConfigured || chatSending}
-                />
-                <Button
-                  onClick={handleSendChat}
-                  disabled={!chatInput.trim() || !isApiConfigured || chatSending}
-                  size="icon"
-                  className="h-auto"
-                >
-                  {chatSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <BarChart2 className="w-3 h-3 text-amber-500" />
+                  <span>每次对话自动附加当前 K 线图截图供 AI 分析</span>
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="询问 AI 分析师关于这笔交易的任何问题..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendChat();
+                      }
+                    }}
+                    rows={2}
+                    className="resize-none"
+                    disabled={!isApiConfigured || chatSending}
+                  />
+                  <Button
+                    onClick={handleSendChat}
+                    disabled={!chatInput.trim() || !isApiConfigured || chatSending}
+                    size="icon"
+                    className="h-auto"
+                  >
+                    {chatSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </TabsContent>
