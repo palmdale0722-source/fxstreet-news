@@ -441,3 +441,26 @@ export const tradeCompanionMessages = mysqlTable("trade_companion_messages", {
 
 export type TradeCompanionMessage = typeof tradeCompanionMessages.$inferSelect;
 export type InsertTradeCompanionMessage = typeof tradeCompanionMessages.$inferInsert;
+
+// 价格提醒表
+export const priceAlerts = mysqlTable("price_alerts", {
+  id: int().autoincrement().notNull(),
+  userId: int("user_id").notNull(),
+  companionId: int("companion_id"),           // 关联的交易伴飞（可选）
+  symbol: varchar({ length: 20 }).notNull(),  // 货币对，如 EUR/USD
+  targetPrice: varchar("target_price", { length: 32 }).notNull(), // 目标价格
+  condition: mysqlEnum(['above', 'below']).notNull(), // above=价格突破目标价上方, below=跌破目标价下方
+  note: varchar({ length: 255 }),             // 备注（如"等待回调到此位置入场"）
+  status: mysqlEnum(['pending', 'triggered', 'cancelled']).default('pending').notNull(),
+  triggeredAt: timestamp("triggered_at", { mode: 'string' }),
+  triggeredPrice: varchar("triggered_price", { length: 32 }), // 实际触发时的价格
+  createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("pa_userId_idx").on(table.userId),
+  index("pa_symbol_idx").on(table.symbol),
+  index("pa_status_idx").on(table.status),
+  index("pa_companionId_idx").on(table.companionId),
+]);
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type InsertPriceAlert = typeof priceAlerts.$inferInsert;

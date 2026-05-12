@@ -1,4 +1,5 @@
 import { runFullUpdate } from "./fxService";
+import { startPriceAlertMonitor, stopPriceAlertMonitor } from "./priceAlertMonitor";
 import { fetchSignalEmails } from "./imapService";
 import { getActiveImapConfig, saveCurrencyStrengthCache, getCurrencyStrengthCache } from "./db";
 import { analyzeNewTvIdeas } from "./tvIdeaAnalyzer";
@@ -41,6 +42,8 @@ export function startCronJobs() {
 
   // 启动货币强弱矩阵更新（每天一次）
   startDailyStrengthMatrixUpdates();
+  // 启动价格提醒监控（每分钟检查一次）
+  startPriceAlertMonitor();
 }
 
 // 启动每天货币强弱矩阵更新（每天上午 8 点）

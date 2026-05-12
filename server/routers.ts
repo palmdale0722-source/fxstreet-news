@@ -56,6 +56,9 @@ import {
   getSignalAiPromptHistory,
   rollbackSignalAiPrompt,
   type SignalStatus,
+  createPriceAlert,
+  getPriceAlerts,
+  cancelPriceAlert,
 } from "./db";
 import { runFullUpdate } from "./fxService";
 import { fetchSignalEmails } from "./imapService";
@@ -1658,6 +1661,41 @@ ${newsText}
             message: "版本不存在或无权限访问",
           });
         }
+        return { success: true };
+      }),
+  }),
+  priceAlert: router({
+    // 创建价格提醒
+    create: protectedProcedure
+      .input(z.object({
+        symbol: z.string(),
+        targetPrice: z.string(),
+        condition: z.enum(["above", "below"]),
+        note: z.string().optional(),
+        companionId: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const id = await createPriceAlert({
+          userId: ctx.user.id,
+          symbol: input.symbol,
+          targetPrice: input.targetPrice,
+          condition: input.condition,
+          note: input.note ?? null,
+          companionId: input.companionId ?? null,
+        });
+        return { id };
+      }),
+    // 查询价格提醒列表
+    list: protectedProcedure
+      .input(z.object({ companionId: z.number().optional() }))
+      .query(async ({ input, ctx }) => {
+        return getPriceAlerts(ctx.user.id, input.companionId);
+      }),
+    // 取消价格提醒
+    cancel: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await cancelPriceAlert(input.id, ctx.user.id);
         return { success: true };
       }),
   }),

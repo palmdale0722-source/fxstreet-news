@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CandlestickChart } from "@/components/CandlestickChart";
-import { ArrowLeft, TrendingUp, TrendingDown, Bot, BookOpen, BarChart2, Send, Loader2, AlertTriangle, CheckCircle2, MinusCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Bot, BookOpen, BarChart2, Send, Loader2, AlertTriangle, CheckCircle2, MinusCircle, ChevronRight, Bell, BellOff, X } from "lucide-react";
 import { Streamdown } from "streamdown";
 import html2canvas from "html2canvas";
 
@@ -222,6 +222,27 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     },
   });
 
+  // 价格提醒状态
+  const [showAlertForm, setShowAlertForm] = useState(false);
+  const [alertTargetPrice, setAlertTargetPrice] = useState("");
+  const [alertCondition, setAlertCondition] = useState<"above" | "below">("below");
+  const [alertNote, setAlertNote] = useState("");
+  // 价格提醒查询
+  const { data: priceAlerts = [], refetch: refetchAlerts } = trpc.priceAlert.list.useQuery(
+    { companionId: companionId! },
+    { enabled: !!companionId }
+  );
+  const createAlertMutation = trpc.priceAlert.create.useMutation({
+    onSuccess: () => {
+      refetchAlerts();
+      setShowAlertForm(false);
+      setAlertTargetPrice("");
+      setAlertNote("");
+    },
+  });
+  const cancelAlertMutation = trpc.priceAlert.cancel.useMutation({
+    onSuccess: () => { refetchAlerts(); },
+  });
   const createMutation = trpc.tradeCompanion.create.useMutation({
     onSuccess: (data) => {
       setCompanionId(data.id);
@@ -596,6 +617,115 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
                           </Button>
                           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowConfirmEntry(false)}>取消</Button>
                         </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              {/* ── 价格提醒面板 ── */}
+              {companionId && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-orange-400" />
+                        价格提醒
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => setShowAlertForm(!showAlertForm)}
+                      >
+                        {showAlertForm ? "取消" : "+ 新建提醒"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {showAlertForm && (
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-2">
+                        <p className="text-xs text-muted-foreground">设置价格提醒后，后台每分钟监控报价，触及目标价时推送 Manus 通知</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">触发条件</label>
+                            <Select value={alertCondition} onValueChange={(v) => setAlertCondition(v as "above" | "below")}>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="above">价格突破上方（大于等于）</SelectItem>
+                                <SelectItem value="below">价格跌破下方（小于等于）</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">目标价格 *</label>
+                            <Input
+                              className="h-8 text-xs font-mono"
+                              placeholder="1.08500"
+                              value={alertTargetPrice}
+                              onChange={e => setAlertTargetPrice(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">备注（可选）</label>
+                          <Input
+                            className="h-8 text-xs"
+                            placeholder="例：等待回调到此位置入场"
+                            value={alertNote}
+                            onChange={e => setAlertNote(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs bg-orange-500 hover:bg-orange-600"
+                          disabled={!alertTargetPrice || createAlertMutation.isPending}
+                          onClick={() => createAlertMutation.mutate({
+                            symbol: companion?.symbol ?? symbol,
+                            targetPrice: alertTargetPrice,
+                            condition: alertCondition,
+                            note: alertNote || undefined,
+                            companionId: companionId,
+                          })}
+                        >
+                          {createAlertMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "设置提醒"}
+                        </Button>
+                      </div>
+                    )}
+                    {priceAlerts.length === 0 && !showAlertForm && (
+                      <p className="text-xs text-muted-foreground text-center py-2">暂无价格提醒，点击「新建提醒」设置</p>
+                    )}
+                    {priceAlerts.length > 0 && (
+                      <div className="space-y-1.5">
+                        {priceAlerts.map(alert => (
+                          <div key={alert.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs border ${
+                            alert.status === 'triggered' ? 'bg-green-500/10 border-green-500/30' :
+                            alert.status === 'cancelled' ? 'bg-muted/30 border-border opacity-50' :
+                            'bg-orange-500/10 border-orange-500/30'
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              {alert.status === 'pending' && <Bell className="w-3 h-3 text-orange-400" />}
+                              {alert.status === 'triggered' && <CheckCircle2 className="w-3 h-3 text-green-400" />}
+                              {alert.status === 'cancelled' && <BellOff className="w-3 h-3 text-muted-foreground" />}
+                              <span className="font-mono font-medium">{alert.condition === 'above' ? '>=' : '<='} {alert.targetPrice}</span>
+                              {alert.note && <span className="text-muted-foreground">— {alert.note}</span>}
+                              {alert.status === 'triggered' && alert.triggeredPrice && (
+                                <span className="text-green-400">触发价：{alert.triggeredPrice}</span>
+                              )}
+                            </div>
+                            {alert.status === 'pending' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => cancelAlertMutation.mutate({ id: alert.id })}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </CardContent>

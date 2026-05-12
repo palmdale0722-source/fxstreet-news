@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt } from "../drizzle/schema";
+import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt, priceAlerts, type InsertPriceAlert } from "../drizzle/schema";
 
 import { ENV } from './_core/env';
 
@@ -1034,4 +1034,53 @@ export async function rollbackSignalAiPrompt(userId: number, versionId: number) 
     console.error("[DB] Failed to rollback signal AI prompt:", error);
     throw error;
   }
+}
+
+// ─── Price Alerts ─────────────────────────────────────────────────────────────
+export async function createPriceAlert(data: InsertPriceAlert) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(priceAlerts).values(data);
+  return (result as any).insertId as number;
+}
+
+export async function getPriceAlerts(userId: number, companionId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(priceAlerts.userId, userId)];
+  if (companionId !== undefined) {
+    conditions.push(eq(priceAlerts.companionId, companionId));
+  }
+  return db.select().from(priceAlerts)
+    .where(and(...conditions))
+    .orderBy(desc(priceAlerts.createdAt));
+}
+
+export async function getAllPendingAlerts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(priceAlerts)
+    .where(eq(priceAlerts.status, 'pending'));
+}
+
+export async function triggerPriceAlert(id: number, triggeredPrice: string) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(priceAlerts)
+    .set({
+      status: 'triggered',
+      triggeredAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      triggeredPrice,
+    })
+    .where(eq(priceAlerts.id, id));
+  return true;
+}
+
+export async function cancelPriceAlert(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(priceAlerts)
+    .set({ status: 'cancelled' })
+    .where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, userId)));
+  return true;
 }

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `price_alerts` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`user_id` int NOT NULL,\n\t`companion_id` int,\n\t`symbol` varchar(20) NOT NULL,\n\t`target_price` varchar(32) NOT NULL,\n\t`condition` enum('above','below') NOT NULL,\n\t`note` varchar(255),\n\t`status` enum('pending','triggered','cancelled') NOT NULL DEFAULT 'pending',\n\t`triggered_at` timestamp,\n\t`triggered_price` varchar(32),\n\t`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX `pa_userId_idx` ON `price_alerts` (`user_id`);\nCREATE INDEX `pa_symbol_idx` ON `price_alerts` (`symbol`);\nCREATE INDEX `pa_status_idx` ON `price_alerts` (`status`);\nCREATE INDEX `pa_companionId_idx` ON `price_alerts` (`companion_id`);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE `price_alerts` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`user_id` int NOT NULL,\n\t`companion_id` int,\n\t`symbol` varchar(20) NOT NULL,\n\t`target_price` varchar(32) NOT NULL,\n\t`condition` enum('above','below') NOT NULL,\n\t`note` varchar(255),\n\t`status` enum('pending','triggered','cancelled') NOT NULL DEFAULT 'pending',\n\t`triggered_at` timestamp,\n\t`triggered_price` varchar(32),\n\t`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX `pa_userId_idx` ON `price_alerts` (`user_id`);\nCREATE INDEX `pa_symbol_idx` ON `price_alerts` (`symbol`);\nCREATE INDEX `pa_status_idx` ON `price_alerts` (`status`);\nCREATE INDEX `pa_companionId_idx` ON `price_alerts` (`companion_id`);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3417
+}
