@@ -1,23 +1,24 @@
 /**
  * 价格提醒监控服务
- * 每分钟检查所有待触发的价格提醒，触及目标价后发送 Manus 通知
+ * 每分钟检查所有待触发的价格提醒，使用 MT4 M15 K 线收盘价做判断
+ * 触及目标价后发送 Manus 通知
  */
 import { getAllPendingAlerts, triggerPriceAlert } from "./db";
 import { getMt4Bars } from "./mt4Service";
-import { getForexQuote } from "./forexQuote";
 import { notifyOwner } from "./_core/notification";
 
 let monitorTimer: NodeJS.Timeout | null = null;
 let isMonitorRunning = false;
 
-// 缓存最近获取的价格（避免同一品种重复请求）
+// 缓存最近获取的 MT4 价格（避免同一品种重复请求，30 秒 TTL）
 const priceCache: Map<string, { price: number; fetchedAt: number }> = new Map();
-const PRICE_CACHE_TTL_MS = 30 * 1000; // 30 秒缓存
+const PRICE_CACHE_TTL_MS = 30 * 1000;
 
 /**
- * 获取货币对当前价格（优先 MT4，降级 Yahoo Finance）
+ * 从 MT4 M15 数据获取货币对最新收盘价
+ * symbol 格式：EUR/USD → EURUSD（去掉斜杠）
  */
-async function getCurrentPrice(symbol: string): Promise<number | null> {
+async function getMt4CurrentPrice(symbol: string): Promise<number | null> {
   // 检查缓存
   const cached = priceCache.get(symbol);
   if (cached && Date.now() - cached.fetchedAt < PRICE_CACHE_TTL_MS) {
@@ -25,7 +26,6 @@ async function getCurrentPrice(symbol: string): Promise<number | null> {
   }
 
   try {
-    // 优先从 MT4 获取最新 K 线收盘价
     const mt4Symbol = symbol.replace("/", "");
     const bars = await getMt4Bars(mt4Symbol, 1);
     if (bars && bars.length > 0) {
@@ -36,21 +36,10 @@ async function getCurrentPrice(symbol: string): Promise<number | null> {
       }
     }
   } catch (e) {
-    // MT4 失败，继续尝试 Yahoo Finance
+    console.warn(`[PriceAlert] Failed to get MT4 price for ${symbol}:`, e);
   }
 
-  try {
-    // 降级到 Yahoo Finance
-    const quote = await getForexQuote(symbol);
-    if (quote && quote.currentPrice > 0) {
-      priceCache.set(symbol, { price: quote.currentPrice, fetchedAt: Date.now() });
-      return quote.currentPrice;
-    }
-  } catch (e) {
-    console.warn(`[PriceAlert] Failed to get price for ${symbol}:`, e);
-  }
-
-  return null;
+  return null; // MT4 无数据时不触发，等待下次检查
 }
 
 /**
@@ -73,8 +62,11 @@ async function checkPriceAlerts() {
     }
 
     for (const [symbol, alerts] of Array.from(symbolGroups.entries())) {
-      const currentPrice = await getCurrentPrice(symbol);
-      if (currentPrice === null) continue;
+      const currentPrice = await getMt4CurrentPrice(symbol);
+      if (currentPrice === null) {
+        // MT4 暂无该品种数据，跳过本次检查
+        continue;
+      }
 
       for (const alert of alerts) {
         const targetPrice = parseFloat(alert.targetPrice);
@@ -86,7 +78,7 @@ async function checkPriceAlerts() {
           (alert.condition === "below" && currentPrice <= targetPrice);
 
         if (triggered) {
-          console.log(`[PriceAlert] Alert #${alert.id} triggered: ${symbol} ${alert.condition} ${targetPrice} (current: ${currentPrice})`);
+          console.log(`[PriceAlert] Alert #${alert.id} triggered: ${symbol} ${alert.condition} ${targetPrice} (MT4 M15 close: ${currentPrice})`);
 
           // 标记为已触发
           await triggerPriceAlert(alert.id, currentPrice.toString());
@@ -98,7 +90,7 @@ async function checkPriceAlerts() {
 
           await notifyOwner({
             title: `🔔 价格提醒触发：${symbol}`,
-            content: `${symbol} 已${conditionText}目标价 ${targetPrice}\n当前价格：${currentPrice}${noteText}${companionText}\n\n触发时间：${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`,
+            content: `${symbol} 已${conditionText}目标价 ${targetPrice}\nMT4 M15 收盘价：${currentPrice}${noteText}${companionText}\n\n触发时间：${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`,
           }).catch(e => console.warn("[PriceAlert] Notification failed:", e));
         }
       }
@@ -115,12 +107,12 @@ async function checkPriceAlerts() {
  */
 export function startPriceAlertMonitor() {
   if (monitorTimer) return; // 已在运行
-  console.log("[PriceAlert] Starting price alert monitor (interval: 1 min)");
+  console.log("[PriceAlert] Starting price alert monitor (MT4 M15, interval: 1 min)");
 
-  // 启动后延迟 10 秒首次检查（等待 MT4 数据就绪）
+  // 启动后延迟 15 秒首次检查（等待 MT4 数据就绪）
   setTimeout(() => {
     checkPriceAlerts().catch(console.error);
-  }, 10 * 1000);
+  }, 15 * 1000);
 
   // 之后每 60 秒检查一次
   monitorTimer = setInterval(() => {
