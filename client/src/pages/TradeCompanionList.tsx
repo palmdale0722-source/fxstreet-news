@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 
 const STATUS_CONFIG = {
-  active: { label: "进行中", icon: Activity, color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/30" },
+  watching: { label: "观察中", icon: Activity, color: "text-yellow-400", bg: "bg-yellow-400/10 border-yellow-400/30" },
+  active: { label: "持仓中", icon: Activity, color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/30" },
   closed: { label: "已复盘", icon: CheckCircle2, color: "text-green-400", bg: "bg-green-400/10 border-green-400/30" },
   cancelled: { label: "已取消", icon: XCircle, color: "text-gray-400", bg: "bg-gray-400/10 border-gray-400/30" },
 };
@@ -38,7 +39,7 @@ function formatDate(ts: string | Date | null | undefined) {
 export function TradeCompanionList() {
   const [, navigate] = useLocation();
   const { isAuthenticated } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "closed" | "cancelled">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "watching" | "active" | "closed" | "cancelled">("all");
 
   const { data: companions, isLoading } = trpc.tradeCompanion.list.useQuery(
     { limit: 50, offset: 0 },
@@ -79,7 +80,7 @@ export function TradeCompanionList() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Status filter */}
         <div className="flex gap-2 mb-5 flex-wrap">
-          {(["all", "active", "closed", "cancelled"] as const).map(s => (
+          {(["all", "watching", "active", "closed", "cancelled"] as const).map(s => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}

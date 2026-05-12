@@ -364,3 +364,12 @@
 - [x] 后端 chat 接口：接收 base64，上传 S3，在 AI messages 中附加 image_url
 - [x] AI 系统提示更新：告知 AI 已收到 K 线图截图
 - [x] 前端显示"每次对话自动附加当前 K 线图截图供 AI 分析"提示
+
+## 交易伴飞：观察位 vs 实际入场位
+- [x] 数据库迁移： trade_companions 表添加 actualDirection/actualEntryPrice/actualStopLoss/actualTakeProfit/actualEntryTime 字段
+- [x] 后端：新增 confirmEntry 接口（观察位确认为真实交易）和 cancelEntry 接口（撤销入场）
+- [x] 后端： update 接口支持 watching 状态，新建伴飞默认状态为 watching
+- [x] 前端：伴飞详情页 K 线图 Tab 添加观察位信息栏和「确认入场」面板
+- [x] 前端：K 线图同时展示观察位（灰色虚线）和实际入场位（蓝色实线）
+- [x] 前端：伴飞头部状态徽章区分"观察中"（黄色）和"持仓中"（蓝色）和"已平仓"
+- [x] 前端：伴飞列表页添加"观察中"状态筛选和显示

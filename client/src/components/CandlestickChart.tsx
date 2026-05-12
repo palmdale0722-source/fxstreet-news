@@ -19,9 +19,12 @@ type Timeframe = "M15" | "H1" | "H4" | "D1";
 
 interface CandlestickChartProps {
   symbol: string;
-  entryPrice?: number;
-  stopLoss?: number;
-  takeProfit?: number;
+  entryPrice?: number;      // 实际入场价（实线）
+  stopLoss?: number;        // 实际止损（实线）
+  takeProfit?: number;      // 实际止盈（实线）
+  watchEntryPrice?: number; // 观察位入场价（虚线，灰色）
+  watchStopLoss?: number;   // 观察位止损（虚线）
+  watchTakeProfit?: number; // 观察位止盈（虚线）
   direction?: "buy" | "sell";
   mainHeight?: number;
   height?: number; // alias for mainHeight (backward compat)
@@ -66,6 +69,9 @@ export function CandlestickChart({
   entryPrice,
   stopLoss,
   takeProfit,
+  watchEntryPrice,
+  watchStopLoss,
+  watchTakeProfit,
   direction,
   mainHeight: mainHeightProp = 360,
   height,
@@ -166,15 +172,25 @@ export function CandlestickChart({
     });
     candleSeries.setData(ohlcBars.map(b => ({ time: b.time as any, open: b.open, high: b.high, low: b.low, close: b.close })));
 
-    // Entry / SL / TP lines
+    // 观察位（虚线，灰色）——在实际入场位之前渲染，这样实际位层叠在上方
+    if (watchEntryPrice) {
+      candleSeries.createPriceLine({ price: watchEntryPrice, color: "#94a3b8", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "观察位" });
+    }
+    if (watchStopLoss) {
+      candleSeries.createPriceLine({ price: watchStopLoss, color: "#f87171", lineWidth: 1, lineStyle: 3, axisLabelVisible: true, title: "观察SL" });
+    }
+    if (watchTakeProfit) {
+      candleSeries.createPriceLine({ price: watchTakeProfit, color: "#4ade80", lineWidth: 1, lineStyle: 3, axisLabelVisible: true, title: "观察TP" });
+    }
+    // 实际入场位（实线）
     if (entryPrice) {
-      candleSeries.createPriceLine({ price: entryPrice, color: "#60a5fa", lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: "入场" });
+      candleSeries.createPriceLine({ price: entryPrice, color: "#60a5fa", lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: "实际入场" });
     }
     if (stopLoss) {
-      candleSeries.createPriceLine({ price: stopLoss, color: "#ef4444", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "止损" });
+      candleSeries.createPriceLine({ price: stopLoss, color: "#ef4444", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "实际SL" });
     }
     if (takeProfit) {
-      candleSeries.createPriceLine({ price: takeProfit, color: "#22c55e", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "止盈" });
+      candleSeries.createPriceLine({ price: takeProfit, color: "#22c55e", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "实际TP" });
     }
 
     // ── AMA overlay ──
@@ -396,7 +412,7 @@ export function CandlestickChart({
       trendwaveChartRef.current?.remove(); trendwaveChartRef.current = null;
       macdChartRef.current?.remove(); macdChartRef.current = null;
     };
-  }, [bars, entryPrice, stopLoss, takeProfit, mainHeight, showAMA, showSupertrend, showTrendWave, showMACD, showIndicators]);
+  }, [bars, entryPrice, stopLoss, takeProfit, watchEntryPrice, watchStopLoss, watchTakeProfit, mainHeight, showAMA, showSupertrend, showTrendWave, showMACD, showIndicators]);
 
   return (
     <div className="flex flex-col gap-1" ref={containerRef}>

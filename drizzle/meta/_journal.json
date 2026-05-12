@@ -85,6 +85,13 @@
       "when": 1778511172118,
       "tag": "0011_tranquil_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1778569927315,
+      "tag": "0012_lumpy_power_man",
+      "breakpoints": true
     }
   ]
 }

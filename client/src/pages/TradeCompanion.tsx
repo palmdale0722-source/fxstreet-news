@@ -200,6 +200,28 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  // 实际入场确认表单状态
+  const [showConfirmEntry, setShowConfirmEntry] = useState(false);
+  const [actualDirection, setActualDirection] = useState<"buy" | "sell">("buy");
+  const [actualEntryPrice, setActualEntryPrice] = useState("");
+  const [actualStopLoss, setActualStopLoss] = useState("");
+  const [actualTakeProfit, setActualTakeProfit] = useState("");
+
+  const confirmEntryMutation = trpc.tradeCompanion.confirmEntry.useMutation({
+    onSuccess: () => {
+      utils.tradeCompanion.get.invalidate({ id: companionId! });
+      setShowConfirmEntry(false);
+    },
+  });
+  const cancelEntryMutation = trpc.tradeCompanion.cancelEntry.useMutation({
+    onSuccess: () => {
+      utils.tradeCompanion.get.invalidate({ id: companionId! });
+      setActualEntryPrice("");
+      setActualStopLoss("");
+      setActualTakeProfit("");
+    },
+  });
+
   const createMutation = trpc.tradeCompanion.create.useMutation({
     onSuccess: (data) => {
       setCompanionId(data.id);
@@ -444,9 +466,17 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
             {stopLoss && <span className="text-red-400 text-xs font-mono">SL {stopLoss}</span>}
             {takeProfit && <span className="text-green-400 text-xs font-mono">TP {takeProfit}</span>}
           </div>
-          {companion?.status === "closed" && (
-            <Badge variant="outline" className="ml-auto text-muted-foreground">已平仓</Badge>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {companion?.status === "watching" && (
+              <Badge variant="outline" className="text-yellow-400 border-yellow-400/50">👁 观察中</Badge>
+            )}
+            {companion?.status === "active" && (
+              <Badge variant="outline" className="text-blue-400 border-blue-400/50">📈 持仓中</Badge>
+            )}
+            {companion?.status === "closed" && (
+              <Badge variant="outline" className="text-muted-foreground">已平仓</Badge>
+            )}
+          </div>
         </div>
       </div>
 
@@ -471,28 +501,132 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
 
           {/* ── K 线图 ── */}
           <TabsContent value="chart">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">实时 K 线图</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CandlestickChart
-                  symbol={symbol}
-                  entryPrice={parseFloat(entryPrice) || undefined}
-                  stopLoss={stopLoss ? parseFloat(stopLoss) : undefined}
-                  takeProfit={takeProfit ? parseFloat(takeProfit) : undefined}
-                  direction={direction}
-                  height={480}
-                  containerRef={chartContainerRef}
-                />
-                {tradeRationale && (
-                  <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm">
-                    <span className="font-medium text-muted-foreground">交易依据：</span>
-                    {tradeRationale}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              {/* 观察位 vs 实际入场位 信息栏 */}
+              {companionId && companion && (
+                <Card className="border-dashed">
+                  <CardContent className="py-3 px-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      {/* 观察位信息 */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-slate-400 font-medium">👁 观察位</span>
+                        <Badge variant={companion.direction === "buy" ? "default" : "destructive"} className={`text-xs ${companion.direction === "buy" ? "bg-green-600/80" : ""}`}>
+                          {companion.direction === "buy" ? "买" : "卖"}
+                        </Badge>
+                        <span className="font-mono text-slate-300">@ {companion.entryPrice}</span>
+                        {companion.stopLoss && <span className="text-red-400/70 font-mono text-xs">SL {companion.stopLoss}</span>}
+                        {companion.takeProfit && <span className="text-green-400/70 font-mono text-xs">TP {companion.takeProfit}</span>}
+                      </div>
+                      <div className="h-4 w-px bg-border hidden sm:block" />
+                      {/* 实际入场位信息 */}
+                      {companion.actualEntryPrice ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-blue-400 font-medium">📈 实际入场</span>
+                          <Badge variant={companion.actualDirection === "buy" ? "default" : "destructive"} className={`text-xs ${companion.actualDirection === "buy" ? "bg-blue-600" : ""}`}>
+                            {companion.actualDirection === "buy" ? "买" : "卖"}
+                          </Badge>
+                          <span className="font-mono text-blue-300">@ {companion.actualEntryPrice}</span>
+                          {companion.actualStopLoss && <span className="text-red-400 font-mono text-xs">SL {companion.actualStopLoss}</span>}
+                          {companion.actualTakeProfit && <span className="text-green-400 font-mono text-xs">TP {companion.actualTakeProfit}</span>}
+                          {companion.status !== "closed" && (
+                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground"
+                              onClick={() => cancelEntryMutation.mutate({ id: companionId })}
+                              disabled={cancelEntryMutation.isPending}>
+                              撤销入场
+                            </Button>
+                          )}
+                        </div>
+                      ) : companion.status !== "closed" ? (
+                        <Button variant="outline" size="sm" className="gap-1.5 text-xs border-blue-400/50 text-blue-400 hover:bg-blue-400/10"
+                          onClick={() => {
+                            setActualDirection(companion.direction);
+                            setActualEntryPrice(companion.entryPrice);
+                            setActualStopLoss(companion.stopLoss || "");
+                            setActualTakeProfit(companion.takeProfit || "");
+                            setShowConfirmEntry(true);
+                          }}>
+                          <TrendingUp className="w-3.5 h-3.5" /> 确认实际入场
+                        </Button>
+                      ) : null}
+                    </div>
+                    {/* 确认入场表单（展开） */}
+                    {showConfirmEntry && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-3">填写实际入场价格（可与观察位不同），确认后将在 K 线图上同时显示两条价格线</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">方向</label>
+                            <Select value={actualDirection} onValueChange={(v) => setActualDirection(v as "buy" | "sell")}>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="buy">买入</SelectItem>
+                                <SelectItem value="sell">卖出</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">实际入场价 *</label>
+                            <Input className="h-8 text-xs font-mono" placeholder="1.08500" value={actualEntryPrice}
+                              onChange={e => setActualEntryPrice(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">止损</label>
+                            <Input className="h-8 text-xs font-mono" placeholder="可选" value={actualStopLoss}
+                              onChange={e => setActualStopLoss(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">止盈</label>
+                            <Input className="h-8 text-xs font-mono" placeholder="可选" value={actualTakeProfit}
+                              onChange={e => setActualTakeProfit(e.target.value)} />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                            disabled={!actualEntryPrice || confirmEntryMutation.isPending}
+                            onClick={() => confirmEntryMutation.mutate({
+                              id: companionId,
+                              actualDirection,
+                              actualEntryPrice,
+                              actualStopLoss: actualStopLoss || undefined,
+                              actualTakeProfit: actualTakeProfit || undefined,
+                            })}>
+                            {confirmEntryMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "确认入场"}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowConfirmEntry(false)}>取消</Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">实时 K 线图</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CandlestickChart
+                    symbol={symbol}
+                    entryPrice={companion?.actualEntryPrice ? parseFloat(companion.actualEntryPrice) : undefined}
+                    stopLoss={companion?.actualStopLoss ? parseFloat(companion.actualStopLoss) : undefined}
+                    takeProfit={companion?.actualTakeProfit ? parseFloat(companion.actualTakeProfit) : undefined}
+                    watchEntryPrice={companion?.actualEntryPrice ? parseFloat(companion.entryPrice) || undefined : parseFloat(entryPrice) || undefined}
+                    watchStopLoss={companion?.actualEntryPrice && companion.stopLoss ? parseFloat(companion.stopLoss) : undefined}
+                    watchTakeProfit={companion?.actualEntryPrice && companion.takeProfit ? parseFloat(companion.takeProfit) : undefined}
+                    direction={companion?.actualDirection as "buy" | "sell" || direction}
+                    height={480}
+                    containerRef={chartContainerRef}
+                  />
+                  {tradeRationale && (
+                    <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm">
+                      <span className="font-medium text-muted-foreground">交易依据：</span>
+                      {tradeRationale}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* ── 情景规划 ── */}

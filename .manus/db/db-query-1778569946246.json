@@ -1,0 +1,24 @@
+{
+  "query": "UPDATE trade_companions SET status = 'active' WHERE status = 'watching' AND actual_entry_price IS NOT NULL;\nSELECT id, symbol, direction, status, actual_entry_price FROM trade_companions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute UPDATE trade_companions SET status = 'active' WHERE status = 'watching' AND actual_entry_price IS NOT NULL;\nSELECT id, symbol, direction, status, actual_entry_price FROM trade_companions;",
+  "rows": [
+    {
+      "id": "1",
+      "symbol": "EUR/USD",
+      "direction": "buy",
+      "status": "closed",
+      "actual_entry_price": "NULL"
+    },
+    {
+      "id": "2",
+      "symbol": "EUR/USD",
+      "direction": "buy",
+      "status": "closed",
+      "actual_entry_price": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsymbol\tdirection\tstatus\tactual_entry_price\n1\tEUR/USD\tbuy\tclosed\tNULL\n2\tEUR/USD\tbuy\tclosed\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1968
+}

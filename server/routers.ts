@@ -1291,11 +1291,50 @@ ${tvIdeasSection ? `\n【TradingView 社区分析师观点（最新 ${tvIdeasCtx
         stopLoss: z.string().optional(),
         takeProfit: z.string().optional(),
         tradeRationale: z.string().optional(),
-        status: z.enum(["active", "closed", "cancelled"]).optional(),
+        status: z.enum(["watching", "active", "closed", "cancelled"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
         const ok = await updateTradeCompanion(id, ctx.user.id, data as any);
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return { success: true };
+      }),
+
+    // 确认实际入场（观察位 → 真实交易）
+    confirmEntry: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        actualDirection: z.enum(["buy", "sell"]),
+        actualEntryPrice: z.string().min(1),
+        actualStopLoss: z.string().optional(),
+        actualTakeProfit: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, actualDirection, actualEntryPrice, actualStopLoss, actualTakeProfit } = input;
+        const ok = await updateTradeCompanion(id, ctx.user.id, {
+          actualDirection,
+          actualEntryPrice,
+          actualStopLoss: actualStopLoss ?? null,
+          actualTakeProfit: actualTakeProfit ?? null,
+          actualEntryTime: new Date().toISOString(),
+          status: "active",
+        });
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
+        return { success: true };
+      }),
+
+    // 取消入场确认（回到观察状态）
+    cancelEntry: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const ok = await updateTradeCompanion(input.id, ctx.user.id, {
+          actualDirection: null,
+          actualEntryPrice: null,
+          actualStopLoss: null,
+          actualTakeProfit: null,
+          actualEntryTime: null,
+          status: "watching",
+        });
         if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "伴飞记录不存在" });
         return { success: true };
       }),

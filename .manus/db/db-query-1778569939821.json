@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `trade_companions` MODIFY COLUMN `status` enum('watching','active','closed','cancelled') NOT NULL DEFAULT 'watching';\nALTER TABLE `trade_companions` ADD `actual_direction` varchar(8);\nALTER TABLE `trade_companions` ADD `actual_entry_price` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_stop_loss` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_take_profit` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_entry_time` timestamp;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute ALTER TABLE `trade_companions` MODIFY COLUMN `status` enum('watching','active','closed','cancelled') NOT NULL DEFAULT 'watching';\nALTER TABLE `trade_companions` ADD `actual_direction` varchar(8);\nALTER TABLE `trade_companions` ADD `actual_entry_price` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_stop_loss` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_take_profit` varchar(32);\nALTER TABLE `trade_companions` ADD `actual_entry_time` timestamp;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 4002
+}
