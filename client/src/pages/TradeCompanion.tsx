@@ -272,6 +272,14 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     }
   });
 
+  const deleteMutation = trpc.tradeCompanion.delete.useMutation({
+    onSuccess: () => {
+      navigate('/trade-companion');
+    }
+  });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const isApiConfigured = !!(apiConfig.apiUrl && apiConfig.apiKey && apiConfig.model);
 
   // Calculate P&L automatically
@@ -1108,6 +1116,49 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-red-600">确认删除</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-6">
+                确定要删除这条交易伴飞记录吗？此操作无法撤销。
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleteMutation.isPending}
+                >
+                  取消
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => {
+                    deleteMutation.mutate({ id: companion!.id });
+                  }}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      删除中...
+                    </>
+                  ) : (
+                    '确认删除'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
