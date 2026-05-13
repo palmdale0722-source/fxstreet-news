@@ -421,3 +421,16 @@
 - [x] 前端：删除「能源价格」和「其他资产」卡片
 - [x] 前端：修改「汇市表现」为全宽卡片，显示 8 个货币的 4 列网格
 - [x] Bug 修复：forexCommentary 对象未被转换为 JSON 字符串导致数据库存储失败- [x] Bug 修复：前端 forexCommentary JSON 字符串解析错误，添加自动解析逻辑
+
+
+## 信号监控确认系统（新功能）
+- [x] 数据库表设计：signalMonitors、signalMonitorCheckpoints、signalAlerts
+- [x] 后端数据库函数：signalMonitoringDb.ts
+- [x] 后端业务逻辑：signalMonitoringService.ts（监控检查、报警发送）
+- [x] 后端 tRPC 路由：routers/signalMonitoring.ts
+- [x] 前端 UI 页面：SignalMonitoring.tsx（仪表板、详情、检查点、报警）
+- [x] 前端路由集成：App.tsx 中添加 /signal-monitoring 路由
+- [x] 定时任务模块：signalMonitoringCron.ts（5分钟检查、清理过期、统计报告）
+- [ ] 定时任务系统集成（需要配置 Heartbeat）
+- [ ] 完整测试和文档
+- [ ] 用户指南和最佳实践

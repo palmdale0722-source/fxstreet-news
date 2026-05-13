@@ -13,6 +13,7 @@ import Ideas from "./pages/Ideas";
 import MySystem from "./pages/MySystem";
 import { TradeCompanion } from "./pages/TradeCompanion";
 import { TradeCompanionList } from "./pages/TradeCompanionList";
+import SignalMonitoring from "./pages/SignalMonitoring";
 
 function Router() {
   return (
@@ -29,6 +30,8 @@ function Router() {
       <Route path={"/trade-companion"} component={TradeCompanionList} />
       <Route path={"/trade-companion/new"}>{() => <TradeCompanion />}</Route>
       <Route path={"/trade-companion/:id"}>{(params: { id: string }) => <TradeCompanion companionId={parseInt(params.id)} />}</Route>
+      {/* Signal Monitoring route */}
+      <Route path={"/signal-monitoring"} component={SignalMonitoring} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

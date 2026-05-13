@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, mysqlEnum, text, timestamp, varchar, index, uniqueIndex, longtext, date, boolean, tinyint } from "drizzle-orm/mysql-core"
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, mysqlEnum, text, timestamp, varchar, index, uniqueIndex, longtext, date, boolean, tinyint, bigint, decimal, json } from "drizzle-orm/mysql-core"
 import { sql } from "drizzle-orm"
 
 export const agentMessages = mysqlTable("agent_messages", {
@@ -476,3 +476,127 @@ export const tradeCompanionDebates = mysqlTable('trade_companion_debates', {
 ]);
 export type TradeCompanionDebate = typeof tradeCompanionDebates.$inferSelect;
 export type InsertTradeCompanionDebate = typeof tradeCompanionDebates.$inferInsert;
+
+
+// ─── Signal Monitoring System ─────────────────────────────────────────────────
+// 信号监控确认系统：用于将信号进入监控期，在多个品种上进行确认后再入场
+
+export const signalMonitors = mysqlTable('signal_monitors', {
+  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  
+  // 关联信息
+  originalSignalId: bigint({ mode: 'bigint' }).notNull(),
+  userId: bigint({ mode: 'bigint' }).notNull(),
+  
+  // 监控状态
+  status: mysqlEnum(['monitoring', 'confirmed', 'cancelled', 'expired']).default('monitoring').notNull(),
+  
+  // 监控配置
+  monitoredPairs: json().$type<string[]>().notNull(),  // ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"]
+  confirmationStrategy: json().$type<{
+    priceConfirmation: {
+      type: 'breakout' | 'retest' | 'both';
+      breakoutThreshold: number;
+      retestThreshold: number;
+    };
+    indicatorConfirmation: {
+      rsi: { enabled: boolean; overbought: number; oversold: number };
+      macd: { enabled: boolean; crossover: boolean };
+      bollinger: { enabled: boolean; touchBand: boolean };
+    };
+    timeCondition: {
+      monitoringDuration: number;
+      checkInterval: number;
+    };
+  }>().notNull(),
+  
+  // 时间戳
+  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  expiresAt: timestamp('expires_at', { mode: 'string' }),
+  confirmedAt: timestamp('confirmed_at', { mode: 'string' }),
+  
+  // 记录
+  monitoringLog: json(),
+  confirmationDetails: json(),
+}, (table) => [
+  index('sm_userId_status_idx').on(table.userId, table.status),
+  index('sm_originalSignalId_idx').on(table.originalSignalId),
+]);
+
+export type SignalMonitor = typeof signalMonitors.$inferSelect;
+export type InsertSignalMonitor = typeof signalMonitors.$inferInsert;
+
+// ─── Signal Monitor Checkpoints ─────────────────────────────────────────────
+// 监控检查点：记录每个监控品种的实时数据和确认状态
+
+export const signalMonitorCheckpoints = mysqlTable('signal_monitor_checkpoints', {
+  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  
+  // 关联信息
+  monitorId: bigint({ mode: 'bigint' }).notNull(),
+  pair: varchar('pair', { length: 20 }).notNull(),
+  
+  // 价格关键位
+  entryPrice: decimal('entry_price', { precision: 20, scale: 8 }),
+  breakoutLevel: decimal('breakout_level', { precision: 20, scale: 8 }),
+  confirmationLevel: decimal('confirmation_level', { precision: 20, scale: 8 }),
+  
+  // 技术指标快照
+  rsiValue: decimal('rsi_value', { precision: 5, scale: 2 }),
+  macdValue: decimal('macd_value', { precision: 10, scale: 4 }),
+  macdSignal: decimal('macd_signal', { precision: 10, scale: 4 }),
+  bbUpper: decimal('bb_upper', { precision: 20, scale: 8 }),
+  bbLower: decimal('bb_lower', { precision: 20, scale: 8 }),
+  
+  // 监控状态
+  isBreakoutConfirmed: boolean('is_breakout_confirmed').default(false).notNull(),
+  isIndicatorConfirmed: boolean('is_indicator_confirmed').default(false).notNull(),
+  isFinalConfirmed: boolean('is_final_confirmed').default(false).notNull(),
+  
+  // 时间
+  checkpointTime: timestamp('checkpoint_time', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  confirmationTime: timestamp('confirmation_time', { mode: 'string' }),
+}, (table) => [
+  index('smc_monitorId_pair_idx').on(table.monitorId, table.pair),
+]);
+
+export type SignalMonitorCheckpoint = typeof signalMonitorCheckpoints.$inferSelect;
+export type InsertSignalMonitorCheckpoint = typeof signalMonitorCheckpoints.$inferInsert;
+
+// ─── Signal Alerts ──────────────────────────────────────────────────────────
+// 报警记录：记录所有监控过程中的报警和用户反应
+
+export const signalAlerts = mysqlTable('signal_alerts', {
+  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  
+  // 关联信息
+  monitorId: bigint({ mode: 'bigint' }).notNull(),
+  checkpointId: bigint({ mode: 'bigint' }).notNull(),
+  pair: varchar('pair', { length: 20 }).notNull(),
+  userId: bigint({ mode: 'bigint' }).notNull(),
+  
+  // 报警类型
+  alertType: mysqlEnum(['breakout_confirmed', 'indicator_confirmed', 'final_confirmed', 'expired', 'manual_cancel']).notNull(),
+  
+  // 报警内容
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  
+  // 发送状态
+  emailSent: boolean('email_sent').default(false).notNull(),
+  pushSent: boolean('push_sent').default(false).notNull(),
+  emailSentAt: timestamp('email_sent_at', { mode: 'string' }),
+  pushSentAt: timestamp('push_sent_at', { mode: 'string' }),
+  
+  // 用户反应
+  userAction: mysqlEnum(['acknowledged', 'ignored', 'entered', 'cancelled']).default('ignored'),
+  actionTime: timestamp('action_time', { mode: 'string' }),
+  
+  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+}, (table) => [
+  index('sa_monitorId_idx').on(table.monitorId),
+  index('sa_userId_createdAt_idx').on(table.userId, table.createdAt),
+]);
+
+export type SignalAlert = typeof signalAlerts.$inferSelect;
+export type InsertSignalAlert = typeof signalAlerts.$inferInsert;

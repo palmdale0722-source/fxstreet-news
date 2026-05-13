@@ -81,6 +81,7 @@ import {
 import { getForexQuote, formatQuoteForPrompt } from "./forexQuote";
 import { getMt4Bars, getMt4ConnectionStatus, formatMt4BarsForPrompt } from "./mt4Service";
 import { getCurrencyStrengthCache } from "./db";
+import { signalMonitoringRouter } from "./routers/signalMonitoring";
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10);
 
@@ -1801,5 +1802,6 @@ ${chartContext}
         return { success: true };
       }),
   }),
+  signalMonitoring: signalMonitoringRouter,
 });
 export type AppRouter = typeof appRouter;
