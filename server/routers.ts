@@ -59,8 +59,12 @@ import {
   createPriceAlert,
   getPriceAlerts,
   cancelPriceAlert,
+  getDb,
+  createTradeCompanionDebate,
+  getTradeCompanionDebates,
 } from "./db";
 import { runFullUpdate } from "./fxService";
+import { getMt4BarsWithTf } from "./mt4Service";
 import { fetchSignalEmails } from "./imapService";
 import { restartImapJobs, safeRunStrengthMatrix, safeRunHealthCheck } from "./cronJobs";
 import { getHealthReports } from "./systemHealthCheck";
@@ -1628,6 +1632,102 @@ ${newsText}
 
         return { content: assistantContent };
       }),
+    debate: protectedProcedure
+      .input(z.object({
+        companionId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const companion = await getTradeCompanion(input.companionId, ctx.user.id);
+        if (!companion) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
+
+        // Prepare context for debate
+        const direction = companion.direction;
+        const entryPrice = companion.entryPrice;
+        const pair = companion.symbol;
+        const rationale = companion.tradeRationale || '';
+        
+        // Get K-line data for context
+        const bars = await getMt4BarsWithTf(pair, 'M15', 20);
+        const latestBar = bars?.[bars.length - 1];
+        
+        const chartContext = latestBar ? `
+【当前 K 线数据 (M15)】
+- 最新价格: ${latestBar.close}
+- 开盘: ${latestBar.open}
+- 最高: ${latestBar.high}
+- 最低: ${latestBar.low}
+- 观察入场价: ${entryPrice}
+- 建议方向: ${direction === 'buy' ? '看多' : '看空'}
+` : '';
+
+        const systemPrompt = `你是一位专业的外汇交易分析师。现在需要对一个交易机会进行"反向互博"分析。
+
+【交易机会信息】
+- 品种: ${pair}
+- 建议方向: ${direction === 'buy' ? '看多' : '看空'}
+- 入场价: ${entryPrice}
+- 交易理由: ${rationale}
+${chartContext}
+
+【任务要求】
+1. 首先，从"${direction === 'buy' ? '看多' : '看空'}"方向进行分析，列举支持这个方向的 3-5 个关键理由（技术面、基本面、风险因素等）
+2. 其次，从"${direction === 'buy' ? '看空' : '看多'}"方向进行反向分析，列举反对这个方向的 3-5 个关键理由
+3. 最后，综合两方观点，给出你的最终结论：
+   - 该交易机会的综合评分（1-10 分）
+   - 主要风险点（2-3 个）
+   - 建议的操作方案（是否应该执行、如何调整止损止盈等）
+
+【输出格式】
+请按照以下格式输出：
+
+## 正方观点（${direction === 'buy' ? '看多' : '看空'}方向）
+[列举 3-5 个支持理由]
+
+## 反方观点（${direction === 'buy' ? '看空' : '看多'}方向）
+[列举 3-5 个反对理由]
+
+## 综合结论
+- 综合评分: X/10
+- 主要风险: [风险点 1], [风险点 2], [风险点 3]
+- 操作建议: [具体建议]
+`;
+
+        const messages = [
+          {
+            role: 'system' as const,
+            content: systemPrompt,
+          },
+          {
+            role: 'user' as const,
+            content: '请进行反向互博分析。',
+          },
+        ];
+
+        const response = await invokeLLM({
+          messages,
+        });
+
+        const debateContent = (typeof response.choices?.[0]?.message?.content === 'string' ? response.choices?.[0]?.message?.content : JSON.stringify(response.choices?.[0]?.message?.content)) || '分析失败';
+
+        // Save debate record to database
+        const debateRecord = await createTradeCompanionDebate({
+          companionId: input.companionId,
+          userId: ctx.user.id,
+          content: debateContent,
+        });
+
+        if (!debateRecord) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to save debate record' });
+        }
+        return {
+          id: debateRecord.id,
+          content: debateContent,
+          createdAt: debateRecord.createdAt,
+        };
+      }),
+
   }),
 
   // ─── 交易信号 AI Prompt 配置 ───────────────────────────────────────────────

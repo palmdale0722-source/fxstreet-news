@@ -1,0 +1,14 @@
+{
+  "query": "CREATE TABLE `trade_companion_debates` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`companion_id` integer NOT NULL,\n\t`user_id` text NOT NULL,\n\t`content` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tFOREIGN KEY (`companion_id`) REFERENCES `trade_companions`(`id`) ON DELETE cascade\n);\nCREATE INDEX `tcd_companionId_idx` ON `trade_companion_debates` (`companion_id`);\nCREATE INDEX `tcd_userId_idx` ON `trade_companion_debates` (`user_id`);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute CREATE TABLE `trade_companion_debates` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`companion_id` integer NOT NULL,\n\t`user_id` text NOT NULL,\n\t`content` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tFOREIGN KEY (`companion_id`) REFERENCES `trade_companions`(`id`) ON DELETE cascade\n);\nCREATE INDEX `tcd_companionId_idx` ON `trade_companion_debates` (`companion_id`);\nCREATE INDEX `tcd_userId_idx` ON `trade_companion_debates` (`user_id`);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 2 column 40 near \"AUTOINCREMENT NOT NULL,",
+    "\t`companion_id` integer NOT NULL,",
+    "\t`user_id` text NOT NULL,",
+    "\t`content` text NOT NULL,",
+    "\t`created_at` integer NOT NULL,",
+    "\tFOREIGN KEY (`companion_id`) REFERENCES `trade_companions`(`id`) ON DELETE cascade",
+    ")\""
+  ]
+}

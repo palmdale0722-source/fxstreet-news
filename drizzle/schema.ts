@@ -464,3 +464,17 @@ export const priceAlerts = mysqlTable("price_alerts", {
 ]);
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type InsertPriceAlert = typeof priceAlerts.$inferInsert;
+
+export const tradeCompanionDebates = mysqlTable('trade_companion_debates', {
+  id: int().autoincrement().notNull(),
+  companionId: int().notNull().references(() => tradeCompanions.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  content: longtext('content').notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("tcd_companionId_idx").on(table.companionId),
+  index("tcd_userId_idx").on(table.userId),
+]);
+export type TradeCompanionDebate = typeof tradeCompanionDebates.$inferSelect;
+export type InsertTradeCompanionDebate = typeof tradeCompanionDebates.$inferInsert;

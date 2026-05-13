@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt, priceAlerts, type InsertPriceAlert } from "../drizzle/schema";
+import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt, priceAlerts, type InsertPriceAlert, tradeCompanionDebates } from "../drizzle/schema";
 
 import { ENV } from './_core/env';
 
@@ -1084,3 +1084,40 @@ export async function cancelPriceAlert(id: number, userId: number) {
     .where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, userId)));
   return true;
 }
+
+export async function createTradeCompanionDebate(data: {
+  companionId: number;
+  userId: string;
+  content: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  await db
+    .insert(tradeCompanionDebates)
+    .values({
+      companionId: data.companionId,
+      userId: data.userId,
+      content: data.content,
+    });
+  
+  // Get the inserted record
+  const rows = await db
+    .select()
+    .from(tradeCompanionDebates)
+    .where(eq(tradeCompanionDebates.companionId, data.companionId))
+    .orderBy(desc(tradeCompanionDebates.createdAt))
+    .limit(1);
+  
+  return rows[0] || null;
+}
+
+export async function getTradeCompanionDebates(companionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(tradeCompanionDebates)
+    .where(eq(tradeCompanionDebates.companionId, companionId))
+    .orderBy(desc(tradeCompanionDebates.createdAt));
+}
+
