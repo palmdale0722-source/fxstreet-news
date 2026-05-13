@@ -132,6 +132,9 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
   // Companion state
   const [companionId, setCompanionId] = useState<number | null>(initialCompanionId ?? null);
   const [activeTab, setActiveTab] = useState("chart");
+  const [debates, setDebates] = useState<Array<{ id: number; content: string; createdAt: string }>>([]);
+  const [debateLoading, setDebateLoading] = useState(false);
+  const [currentDebate, setCurrentDebate] = useState<string | null>(null);
 
   // Scenarios state
   const [scenarios, setScenarios] = useState<Scenarios | null>(null);
@@ -256,7 +259,17 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
     onSuccess: () => {
       setReviewDone(true);
       utils.tradeCompanion.get.invalidate({ id: companionId! });
+    }
+  });
+  const debateMutation = trpc.tradeCompanion.debate.useMutation({
+    onSuccess: (data) => {
+      setCurrentDebate(data.content);
+      setDebates([...debates, { id: Date.now(), content: data.content, createdAt: new Date().toISOString() }]);
+      setDebateLoading(false);
     },
+    onError: () => {
+      setDebateLoading(false);
+    }
   });
 
   const isApiConfigured = !!(apiConfig.apiUrl && apiConfig.apiKey && apiConfig.model);
@@ -517,6 +530,9 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
             <TabsTrigger value="review" className="gap-2">
               <BookOpen className="w-4 h-4" /> 复盘记录
               {reviewDone && <CheckCircle2 className="w-3 h-3 text-green-400" />}
+            </TabsTrigger>
+            <TabsTrigger value="debate" className="gap-2">
+              <AlertTriangle className="w-4 h-4" /> 反向互博
             </TabsTrigger>
           </TabsList>
 
@@ -1015,6 +1031,79 @@ export function TradeCompanion({ companionId: initialCompanionId, initialSymbol,
                   </CardContent>
                 </Card>
               )}
+            </div>
+          </TabsContent>
+          {/* ── 反向互博 ── */}
+          <TabsContent value="debate">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>反向互博分析</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button
+                    onClick={() => {
+                      setDebateLoading(true);
+                      setCurrentDebate(null);
+                      debateMutation.mutate({ companionId: companion!.id });
+                    }}
+                    disabled={debateLoading}
+                    className="w-full"
+                  >
+                    {debateLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        生成辩论中...
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        开始反向互博
+                      </>
+                    )}
+                  </Button>
+
+                  {currentDebate && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <Streamdown>{currentDebate}</Streamdown>
+                    </div>
+                  )}
+
+                  {debates.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">历史辩论记录</h3>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {debates.map((debate, idx) => (
+                          <div
+                            key={debate.id}
+                            className="bg-gray-50 border border-gray-200 rounded p-3 cursor-pointer hover:bg-gray-100 transition"
+                            onClick={() => setCurrentDebate(debate.content)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="text-xs text-gray-500">
+                                  {new Date(debate.createdAt).toLocaleString()}
+                                </p>
+                                <p className="text-sm line-clamp-2 mt-1">{debate.content}</p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDebates(debates.filter(d => d.id !== debate.id));
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
