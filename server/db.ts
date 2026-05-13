@@ -1,6 +1,6 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, InsertSignalAiPrompt, priceAlerts, type InsertPriceAlert, tradeCompanionDebates } from "../drizzle/schema";
+import { users, news, insights, outlooks, subscriptions, signals, signalNotes, agentSessions, agentMessages, tvIdeas, mt4IndicatorSignals, mt4IndicatorConfigs, tradeJournal, tradingSystem, userApiConfigs, signalAnalyses, imapConfig, mt4TwValues, mt4TfSignals, tradingConversations, notifyConfig, tvIdeaAnalyses, currencyStrengthCache, signalAiPrompts, type InsertSignalAiPrompt, type InsertPriceAlert, priceAlerts, tradeCompanionDebates } from "../drizzle/schema";
 
 import { ENV } from './_core/env';
 
@@ -108,12 +108,18 @@ export async function getTodayInsight(date: string) {
 export async function upsertInsight(data: any): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.insert(insights).values(data).onDuplicateKeyUpdate({
+  const processedData = {
+    ...data,
+    forexCommentary: typeof data.forexCommentary === 'object' 
+      ? JSON.stringify(data.forexCommentary) 
+      : data.forexCommentary,
+  };
+  await db.insert(insights).values(processedData).onDuplicateKeyUpdate({
     set: {
-      summary: data.summary,
-      geopolitics: data.geopolitics,
-      forexCommentary: data.forexCommentary,
-      tradingAdvice: data.tradingAdvice,
+      summary: processedData.summary,
+      geopolitics: processedData.geopolitics,
+      forexCommentary: processedData.forexCommentary,
+      tradingAdvice: processedData.tradingAdvice,
       generatedAt: new Date().toISOString(),
     }
   });
