@@ -680,6 +680,13 @@ export default function Signals() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs" asChild>
+                <Link href="/signal-monitoring">
+                  🎯 信号监控
+                </Link>
+              </Button>
+            )}
             {isAuthenticated && user?.role === "admin" && (
               <>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs" asChild>
