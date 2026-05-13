@@ -917,7 +917,17 @@ function InsightSection() {
                   );
                 }
                 if (key === "forex") {
-                  const forexCommentary = insight.forexCommentary || {};
+                  let forexData = {};
+                  if (insight.forexCommentary) {
+                    try {
+                      forexData = typeof insight.forexCommentary === 'string' 
+                        ? JSON.parse(insight.forexCommentary) 
+                        : insight.forexCommentary;
+                    } catch (e) {
+                      console.error('Failed to parse forexCommentary:', e);
+                      forexData = {};
+                    }
+                  }
                   const currencies = ["USD", "GBP", "JPY", "EUR", "CAD", "NZD", "AUD", "CHF"];
                   return (
                     <div key={key} className="glass-card rounded-xl p-5">
@@ -932,14 +942,14 @@ function InsightSection() {
                         {currencies.map((curr) => (
                           <div key={curr} className="rounded-lg p-3" style={{ background: "oklch(0.98 0.01 78)" }}>
                             <div className="text-xs font-semibold mb-1.5" style={{ color }}>{curr}</div>
-                            <p className="text-xs leading-relaxed text-foreground/85">{forexCommentary[curr as keyof typeof forexCommentary] || "暂无数据"}</p>
+                            <p className="text-xs leading-relaxed text-foreground/85">{forexData[curr as keyof typeof forexData] || "暂无数据"}</p>
                           </div>
                         ))}
                       </div>
                     </div>
                   );
-                }
                 return null;
+                }
               })}
             </div>
             {insight.tradingAdvice && (
