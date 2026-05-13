@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,13 @@ import {
   Loader2,
   RotateCcw,
   CloudUpload,
+  Activity,
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ─── 状态配置 ─────────────────────────────────────────────────────────────────
 type SignalStatus = "pending" | "executed" | "ignored" | "watching";
@@ -404,12 +408,14 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
   onStatusUpdated: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showMonitoringDialog, setShowMonitoringDialog] = useState(false);
 
   // 正文预览（前200字）
   const preview = signal.body.length > 200 ? signal.body.slice(0, 200) + "..." : signal.body;
   const needsExpand = signal.body.length > 200;
 
   return (
+    <>
     <div className="rounded-xl border border-border/60 overflow-hidden transition-shadow hover:shadow-md"
       style={{ background: "var(--card)" }}>
       {/* 卡片头部 */}
@@ -475,19 +481,255 @@ function SignalCard({ signal, isLoggedIn, onStatusUpdated }: {
         {/* 备注区 */}
         <NotesSection signalId={signal.id} isLoggedIn={isLoggedIn} />
 
-        {/* 交易伴飞入口 */}
+        {/* 操作按钮区 */}
         {isLoggedIn && (
-          <div className="mt-3 pt-3 border-t border-border/40">
+          <div className="mt-3 pt-3 border-t border-border/40 flex items-center gap-2 flex-wrap">
             <Link href={`/trade-companion/new?signalId=${signal.id}`}>
               <Button variant="outline" size="sm" className="gap-2 text-xs h-8 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 transition-colors">
                 <Bot className="w-3.5 h-3.5" />
                 交易伴飞
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs h-8 hover:border-orange-400 hover:text-orange-700 transition-colors"
+              style={{ borderColor: "oklch(0.80 0.08 60)", color: "oklch(0.50 0.12 55)" }}
+              onClick={() => setShowMonitoringDialog(true)}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              进入监控
+            </Button>
           </div>
         )}
       </div>
     </div>
+
+    {/* 进入监控对话框 */}
+    <EnterMonitoringDialog
+      signal={signal}
+      isOpen={showMonitoringDialog}
+      onClose={() => setShowMonitoringDialog(false)}
+    />
+    </>
+  );
+}
+
+// ─── 进入监控对话框 ─────────────────────────────────────────────────────────────
+const COMMON_PAIRS = [
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+  "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "CADJPY", "CHFJPY", "NZDJPY",
+  "AUDCAD", "AUDCHF", "AUDNZD", "CADCHF", "EURAUD", "EURCAD",
+  "EURCHF", "EURNZD", "GBPAUD", "GBPCAD", "GBPCHF", "GBPNZD",
+  "NZDCAD", "NZDCHF", "USDSGD", "XAUUSD",
+];
+
+function EnterMonitoringDialog({ signal, isOpen, onClose }: {
+  signal: { id: number; subject: string; body: string };
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [, navigate] = useLocation();
+  const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
+  const [duration, setDuration] = useState("24");
+  const [priceType, setPriceType] = useState<"breakout" | "retest" | "both">("breakout");
+  const [rsiEnabled, setRsiEnabled] = useState(false);
+  const [macdEnabled, setMacdEnabled] = useState(false);
+
+  // 从信号内容中自动识别货币对
+  const autoDetectedPairs = useMemo(() => {
+    const text = (signal.subject + " " + signal.body).toUpperCase();
+    return COMMON_PAIRS.filter(p => text.includes(p));
+  }, [signal]);
+
+  // 初始化时预选自动识别的货币对
+  useEffect(() => {
+    if (isOpen && autoDetectedPairs.length > 0) {
+      setSelectedPairs(autoDetectedPairs.slice(0, 5));
+    }
+  }, [isOpen, autoDetectedPairs]);
+
+  const togglePair = (pair: string) => {
+    setSelectedPairs(prev =>
+      prev.includes(pair)
+        ? prev.filter(p => p !== pair)
+        : prev.length < 5 ? [...prev, pair] : prev
+    );
+  };
+
+  const enterMonitoringMutation = trpc.signalMonitoring.enterMonitoring.useMutation({
+    onSuccess: (data) => {
+      toast.success(`已创建监控任务，正在监控 ${selectedPairs.length} 个货币对`);
+      onClose();
+      navigate("/signal-monitoring");
+    },
+    onError: (e) => toast.error(`创建监控失败：${e.message}`),
+  });
+
+  const handleSubmit = () => {
+    if (selectedPairs.length === 0) {
+      toast.error("请至少选择一个货币对");
+      return;
+    }
+    enterMonitoringMutation.mutate({
+      signalId: BigInt(signal.id),
+      monitoredPairs: selectedPairs,
+      confirmationStrategy: {
+        priceConfirmation: {
+          type: priceType,
+          breakoutThreshold: 0.0005,
+          retestThreshold: 0.0003,
+        },
+        indicatorConfirmation: {
+          rsi: { enabled: rsiEnabled, overbought: 70, oversold: 30 },
+          macd: { enabled: macdEnabled, crossover: true },
+          bollinger: { enabled: false, touchBand: false },
+        },
+        timeCondition: {
+          monitoringDuration: parseInt(duration),
+          checkInterval: 5,
+        },
+      },
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Activity className="w-4 h-4" style={{ color: "oklch(0.60 0.13 60)" }} />
+            进入监控期
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* 信号摘要 */}
+        <div className="rounded-lg p-3 text-xs" style={{ background: "oklch(0.97 0.02 70)", color: "oklch(0.35 0.05 55)" }}>
+          <p className="font-semibold mb-1 text-sm">{signal.subject}</p>
+          <p className="line-clamp-2 text-muted-foreground">{signal.body.slice(0, 120)}...</p>
+        </div>
+
+        {/* 货币对选择 */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-semibold">监控货币对 <span className="text-muted-foreground font-normal">（最多 5 个）</span></Label>
+            <span className="text-xs text-muted-foreground">{selectedPairs.length}/5 已选</span>
+          </div>
+          {autoDetectedPairs.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-2">
+              🔍 从信号中识别到：{autoDetectedPairs.join("、")}
+            </p>
+          )}
+          <div className="grid grid-cols-5 gap-1.5">
+            {COMMON_PAIRS.map(pair => {
+              const isSelected = selectedPairs.includes(pair);
+              const isAuto = autoDetectedPairs.includes(pair);
+              const isDisabled = !isSelected && selectedPairs.length >= 5;
+              return (
+                <button
+                  key={pair}
+                  onClick={() => !isDisabled && togglePair(pair)}
+                  disabled={isDisabled}
+                  className={`px-1.5 py-1 rounded text-xs font-mono font-medium transition-all border ${
+                    isSelected
+                      ? "text-white border-transparent"
+                      : isDisabled
+                      ? "opacity-30 cursor-not-allowed border-border"
+                      : "border-border hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700"
+                  }`}
+                  style={isSelected ? { background: "oklch(0.55 0.13 60)", borderColor: "oklch(0.55 0.13 60)" } : {}}
+                >
+                  {pair}
+                  {isAuto && !isSelected && <span className="ml-0.5 text-amber-500">·</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 确认策略 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold">确认策略</Label>
+
+          <div className="flex items-center gap-3">
+            <Label className="text-xs w-20 shrink-0">价格确认</Label>
+            <Select value={priceType} onValueChange={(v) => setPriceType(v as typeof priceType)}>
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="breakout">突破确认</SelectItem>
+                <SelectItem value="retest">回测确认</SelectItem>
+                <SelectItem value="both">突破 + 回测</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Label className="text-xs w-20 shrink-0">指标确认</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <Checkbox id="rsi" checked={rsiEnabled} onCheckedChange={(v) => setRsiEnabled(!!v)} />
+                <Label htmlFor="rsi" className="text-xs cursor-pointer">RSI</Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Checkbox id="macd" checked={macdEnabled} onCheckedChange={(v) => setMacdEnabled(!!v)} />
+                <Label htmlFor="macd" className="text-xs cursor-pointer">MACD</Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Label className="text-xs w-20 shrink-0">监控时长</Label>
+            <Select value={duration} onValueChange={setDuration}>
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="4">4 小时</SelectItem>
+                <SelectItem value="8">8 小时</SelectItem>
+                <SelectItem value="12">12 小时</SelectItem>
+                <SelectItem value="24">24 小时</SelectItem>
+                <SelectItem value="48">48 小时</SelectItem>
+                <SelectItem value="72">72 小时</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* 已选货币对预览 */}
+        {selectedPairs.length > 0 && (
+          <div className="rounded-lg p-3 text-xs" style={{ background: "oklch(0.96 0.03 145 / 0.4)" }}>
+            <p className="font-medium mb-1" style={{ color: "oklch(0.45 0.12 145)" }}>将监控以下货币对：</p>
+            <div className="flex flex-wrap gap-1.5">
+              {selectedPairs.map(p => (
+                <span key={p} className="px-2 py-0.5 rounded-full text-xs font-mono font-medium text-white"
+                  style={{ background: "oklch(0.55 0.13 145)" }}>{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
+            取消
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1 gap-1.5"
+            style={{ background: "oklch(0.55 0.13 60)", color: "white" }}
+            onClick={handleSubmit}
+            disabled={enterMonitoringMutation.isPending || selectedPairs.length === 0}
+          >
+            {enterMonitoringMutation.isPending ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 创建中...</>
+            ) : (
+              <><Activity className="w-3.5 h-3.5" /> 开始监控</>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
