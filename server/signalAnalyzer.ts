@@ -127,7 +127,7 @@ async function buildAnalysisPrompt(
 
   // 构建市场背景部分
   const marketSection = insight
-    ? `【今日市场洞察】\n${insight.summary}\n外汇：${insight.forex || "暂无"}\n建议：${insight.tradingAdvice || "暂无"}`
+    ? `【今日市场洞察】\n${insight.summary}\n外汇：${typeof insight.forexCommentary === 'string' ? insight.forexCommentary : (insight.forexCommentary ? JSON.stringify(insight.forexCommentary) : "暂无")}\n建议：${insight.tradingAdvice || "暂无"}`
     : "【今日市场洞察】暂无数据";
 
   const outlookSection = outlooks.length > 0

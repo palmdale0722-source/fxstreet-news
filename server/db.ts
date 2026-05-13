@@ -112,9 +112,7 @@ export async function upsertInsight(data: any): Promise<void> {
     set: {
       summary: data.summary,
       geopolitics: data.geopolitics,
-      energy: data.energy,
-      forex: data.forex,
-      assets: data.assets,
+      forexCommentary: data.forexCommentary,
       tradingAdvice: data.tradingAdvice,
       generatedAt: new Date().toISOString(),
     }

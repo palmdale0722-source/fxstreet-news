@@ -93,14 +93,21 @@ export async function generateTodayInsight(date: string): Promise<void> {
 最新新闻：
 ${allTitles || "暂无最新新闻，请基于当前市场背景进行分析"}
 
-请严格按照以下JSON格式输出，所有内容用中文，每个字段100-200字：
+请严格按照以下JSON格式输出，所有内容用中文：
 {
-  "summary": "今日市场总体概述",
-  "geopolitics": "地缘政治与宏观经济分析",
-  "energy": "能源价格（原油、天然气等）走势分析",
-  "forex": "主要货币对汇市表现分析",
-  "assets": "黄金、股指等其他资产表现",
-  "tradingAdvice": "今日交易建议与风险提示"
+  "summary": "今日市场总体概述（100-150字）",
+  "geopolitics": "地缘政治与宏观经济分析（100-150字）",
+  "forexCommentary": {
+    "USD": "美元一句话点评",
+    "EUR": "欧元一句话点评",
+    "GBP": "英镑一句话点评",
+    "JPY": "日元一句话点评",
+    "CAD": "加元一句话点评",
+    "AUD": "澳元一句话点评",
+    "NZD": "新西兰币一句话点评",
+    "CHF": "瑞郎一句话点评"
+  },
+  "tradingAdvice": "今日交易建议与风险提示（100-150字）"
 }`;
 
   try {
@@ -119,12 +126,23 @@ ${allTitles || "暂无最新新闻，请基于当前市场背景进行分析"}
             properties: {
               summary: { type: "string" },
               geopolitics: { type: "string" },
-              energy: { type: "string" },
-              forex: { type: "string" },
-              assets: { type: "string" },
+              forexCommentary: {
+                type: "object",
+                properties: {
+                  USD: { type: "string" },
+                  EUR: { type: "string" },
+                  GBP: { type: "string" },
+                  JPY: { type: "string" },
+                  CAD: { type: "string" },
+                  AUD: { type: "string" },
+                  NZD: { type: "string" },
+                  CHF: { type: "string" },
+                },
+                required: ["USD", "EUR", "GBP", "JPY", "CAD", "AUD", "NZD", "CHF"],
+              },
               tradingAdvice: { type: "string" },
             },
-            required: ["summary", "geopolitics", "energy", "forex", "assets", "tradingAdvice"],
+            required: ["summary", "geopolitics", "forexCommentary", "tradingAdvice"],
             additionalProperties: false,
           },
         },

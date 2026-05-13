@@ -870,9 +870,7 @@ function InsightSection() {
 
   const sections = [
     { key: "geopolitics", label: "地缘政治", icon: <Globe className="w-4 h-4" />, color: "oklch(0.50 0.10 200)" },
-    { key: "energy", label: "能源价格", icon: <Zap className="w-4 h-4" />, color: "oklch(0.55 0.14 30)" },
     { key: "forex", label: "汇市表现", icon: <DollarSign className="w-4 h-4" />, color: "oklch(0.60 0.13 60)" },
-    { key: "assets", label: "其他资产", icon: <BarChart2 className="w-4 h-4" />, color: "oklch(0.55 0.15 140)" },
   ] as const;
 
   return (
@@ -901,21 +899,47 @@ function InsightSection() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-4">
               {sections.map(({ key, label, icon, color }) => {
-                const text = insight[key as keyof typeof insight] as string;
-                return (
-                  <div key={key} className="glass-card rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
-                        {icon}
+                if (key === "geopolitics") {
+                  const text = insight[key as keyof typeof insight] as string;
+                  return (
+                    <div key={key} className="glass-card rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
+                          {icon}
+                        </div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
                       </div>
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+                      <p className="text-xs leading-relaxed text-foreground/85">{text || "暂无数据"}</p>
                     </div>
-                    <p className="text-xs leading-relaxed text-foreground/85">{text || "暂无数据"}</p>
-                  </div>
-                );
+                  );
+                }
+                if (key === "forex") {
+                  const forexCommentary = insight.forexCommentary || {};
+                  const currencies = ["USD", "GBP", "JPY", "EUR", "CAD", "NZD", "AUD", "CHF"];
+                  return (
+                    <div key={key} className="glass-card rounded-xl p-5">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: `color-mix(in oklch, ${color} 12%, transparent)`, color }}>
+                          {icon}
+                        </div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {currencies.map((curr) => (
+                          <div key={curr} className="rounded-lg p-3" style={{ background: "oklch(0.98 0.01 78)" }}>
+                            <div className="text-xs font-semibold mb-1.5" style={{ color }}>{curr}</div>
+                            <p className="text-xs leading-relaxed text-foreground/85">{forexCommentary[curr as keyof typeof forexCommentary] || "暂无数据"}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
               })}
             </div>
             {insight.tradingAdvice && (

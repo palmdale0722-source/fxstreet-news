@@ -59,9 +59,7 @@ export const insights = mysqlTable("insights", {
 	date: varchar({ length: 10 }).notNull(),
 	summary: text().notNull(),
 	geopolitics: text(),
-	energy: text(),
-	forex: text(),
-	assets: text(),
+	forexCommentary: text(), // JSON: { USD: "...", GBP: "...", ... }
 	tradingAdvice: text(),
 	generatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 },

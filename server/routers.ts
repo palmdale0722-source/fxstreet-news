@@ -481,7 +481,7 @@ export const appRouter = router({
           : "暂无展望数据";
 
         const insightSection = insight
-          ? `市场总结: ${insight.summary}\n地缘政治: ${insight.geopolitics || ""}\n能源市场: ${insight.energy || ""}\n汇市表现: ${insight.forex || ""}\n交易建议: ${insight.tradingAdvice || ""}`
+          ? `市场总结: ${insight.summary}\n地缘政治: ${insight.geopolitics || ""}\n\n汇市表现:\n${typeof insight.forexCommentary === 'object' && insight.forexCommentary ? Object.entries(insight.forexCommentary).map(([curr, comment]) => `${curr}: ${comment}`).join('\n') : insight.forexCommentary || ""}\n\n交易建议: ${insight.tradingAdvice || ""}`
           : "暂无洞察数据";
 
         // 行情数据块：优先使用 MT4 推送数据，降级回 Yahoo Finance
