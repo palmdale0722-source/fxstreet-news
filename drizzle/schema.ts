@@ -482,11 +482,11 @@ export type InsertTradeCompanionDebate = typeof tradeCompanionDebates.$inferInse
 // 信号监控确认系统：用于将信号进入监控期，在多个品种上进行确认后再入场
 
 export const signalMonitors = mysqlTable('signal_monitors', {
-  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  id: int().primaryKey().autoincrement().notNull(),
   
   // 关联信息
-  originalSignalId: bigint({ mode: 'bigint' }).notNull(),
-  userId: bigint({ mode: 'bigint' }).notNull(),
+  originalSignalId: int().notNull(),
+  userId: int().notNull(),
   
   // 监控状态
   status: mysqlEnum(['monitoring', 'confirmed', 'cancelled', 'expired']).default('monitoring').notNull(),
@@ -530,10 +530,10 @@ export type InsertSignalMonitor = typeof signalMonitors.$inferInsert;
 // 监控检查点：记录每个监控品种的实时数据和确认状态
 
 export const signalMonitorCheckpoints = mysqlTable('signal_monitor_checkpoints', {
-  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  id: int().primaryKey().autoincrement().notNull(),
   
   // 关联信息
-  monitorId: bigint({ mode: 'bigint' }).notNull(),
+  monitorId: int().notNull(),
   pair: varchar('pair', { length: 20 }).notNull(),
   
   // 价格关键位
@@ -567,13 +567,13 @@ export type InsertSignalMonitorCheckpoint = typeof signalMonitorCheckpoints.$inf
 // 报警记录：记录所有监控过程中的报警和用户反应
 
 export const signalAlerts = mysqlTable('signal_alerts', {
-  id: bigint({ mode: 'bigint' }).primaryKey().autoincrement().notNull(),
+  id: int().primaryKey().autoincrement().notNull(),
   
   // 关联信息
-  monitorId: bigint({ mode: 'bigint' }).notNull(),
-  checkpointId: bigint({ mode: 'bigint' }).notNull(),
+  monitorId: int().notNull(),
+  checkpointId: int().notNull(),
   pair: varchar('pair', { length: 20 }).notNull(),
-  userId: bigint({ mode: 'bigint' }).notNull(),
+  userId: int().notNull(),
   
   // 报警类型
   alertType: mysqlEnum(['breakout_confirmed', 'indicator_confirmed', 'final_confirmed', 'expired', 'manual_cancel']).notNull(),

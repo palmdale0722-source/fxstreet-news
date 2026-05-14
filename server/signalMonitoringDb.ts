@@ -5,8 +5,8 @@ import { signalMonitors, signalMonitorCheckpoints, signalAlerts } from '../drizz
 // ─── Signal Monitors ────────────────────────────────────────────────────────
 
 export async function createSignalMonitor(data: {
-  originalSignalId: bigint;
-  userId: bigint;
+  originalSignalId: number;
+  userId: number;
   monitoredPairs: string[];
   confirmationStrategy: any;
   expiresAt: Date;
@@ -25,7 +25,7 @@ export async function createSignalMonitor(data: {
   return result;
 }
 
-export async function getSignalMonitor(monitorId: bigint) {
+export async function getSignalMonitor(monitorId: number) {
   const db = await getDb();
   if (!db) return null;
 
@@ -36,7 +36,7 @@ export async function getSignalMonitor(monitorId: bigint) {
   return result[0] || null;
 }
 
-export async function getActiveMonitors(userId: bigint) {
+export async function getActiveMonitors(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
@@ -57,7 +57,7 @@ export async function getAllActiveMonitors() {
     .orderBy(desc(signalMonitors.createdAt));
 }
 
-export async function updateMonitorStatus(monitorId: bigint, status: 'monitoring' | 'confirmed' | 'cancelled' | 'expired') {
+export async function updateMonitorStatus(monitorId: number, status: 'monitoring' | 'confirmed' | 'cancelled' | 'expired') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -71,7 +71,7 @@ export async function updateMonitorStatus(monitorId: bigint, status: 'monitoring
     .where(eq(signalMonitors.id, monitorId));
 }
 
-export async function updateMonitorLog(monitorId: bigint, log: any) {
+export async function updateMonitorLog(monitorId: number, log: any) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -83,7 +83,7 @@ export async function updateMonitorLog(monitorId: bigint, log: any) {
 // ─── Signal Monitor Checkpoints ─────────────────────────────────────────────
 
 export async function createCheckpoint(data: {
-  monitorId: bigint;
+  monitorId: number;
   pair: string;
   entryPrice?: number;
   breakoutLevel?: number;
@@ -111,7 +111,7 @@ export async function createCheckpoint(data: {
   });
 }
 
-export async function getCheckpoints(monitorId: bigint) {
+export async function getCheckpoints(monitorId: number) {
   const db = await getDb();
   if (!db) return [];
 
@@ -119,7 +119,7 @@ export async function getCheckpoints(monitorId: bigint) {
     .where(eq(signalMonitorCheckpoints.monitorId, monitorId));
 }
 
-export async function getCheckpoint(monitorId: bigint, pair: string) {
+export async function getCheckpoint(monitorId: number, pair: string) {
   const db = await getDb();
   if (!db) return null;
 
@@ -133,7 +133,7 @@ export async function getCheckpoint(monitorId: bigint, pair: string) {
   return result[0] || null;
 }
 
-export async function updateCheckpoint(checkpointId: bigint, data: {
+export async function updateCheckpoint(checkpointId: number, data: {
   isBreakoutConfirmed?: boolean;
   isIndicatorConfirmed?: boolean;
   isFinalConfirmed?: boolean;
@@ -166,10 +166,10 @@ export async function updateCheckpoint(checkpointId: bigint, data: {
 // ─── Signal Alerts ──────────────────────────────────────────────────────────
 
 export async function createAlert(data: {
-  monitorId: bigint;
-  checkpointId: bigint;
+  monitorId: number;
+  checkpointId: number;
   pair: string;
-  userId: bigint;
+  userId: number;
   alertType: 'breakout_confirmed' | 'indicator_confirmed' | 'final_confirmed' | 'expired' | 'manual_cancel';
   title: string;
   message: string;
@@ -188,7 +188,7 @@ export async function createAlert(data: {
   });
 }
 
-export async function getAlerts(monitorId: bigint) {
+export async function getAlerts(monitorId: number) {
   const db = await getDb();
   if (!db) return [];
 
@@ -197,7 +197,7 @@ export async function getAlerts(monitorId: bigint) {
     .orderBy(desc(signalAlerts.createdAt));
 }
 
-export async function getUserAlerts(userId: bigint, limit: number = 20) {
+export async function getUserAlerts(userId: number, limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
 
@@ -207,7 +207,7 @@ export async function getUserAlerts(userId: bigint, limit: number = 20) {
     .limit(limit);
 }
 
-export async function updateAlertStatus(alertId: bigint, data: {
+export async function updateAlertStatus(alertId: number, data: {
   emailSent?: boolean;
   emailSentAt?: Date;
   pushSent?: boolean;

@@ -9,8 +9,8 @@ import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Monitor {
-  id: bigint;
-  originalSignalId: bigint;
+  id: number;
+  originalSignalId: number;
   status: 'active' | 'confirmed' | 'expired' | 'cancelled';
   monitoredPairs: string[];
   confirmationStrategy: any;
@@ -20,7 +20,7 @@ interface Monitor {
 }
 
 interface Checkpoint {
-  id: bigint;
+  id: number;
   pair: string;
   entryPrice: number | null;
   breakoutLevel: number | null;
@@ -35,7 +35,7 @@ interface Checkpoint {
 }
 
 interface Alert {
-  id: bigint;
+  id: number;
   pair: string;
   alertType: string;
   title: string;
@@ -49,7 +49,7 @@ interface Alert {
 // ─── Signal Monitoring Dashboard ────────────────────────────────────────────
 
 export function SignalMonitoring() {
-  const [selectedMonitor, setSelectedMonitor] = useState<bigint | null>(null);
+  const [selectedMonitor, setSelectedMonitor] = useState<number | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // 获取活跃监控列表
@@ -159,7 +159,7 @@ export function SignalMonitoring() {
                         {new Date(monitor.createdAt || '').toLocaleString()}
                       </div>
                       <div className="flex gap-1 mt-2">
-                        {monitor.monitoredPairs.map((pair) => (
+                        {monitor.monitoredPairs.map((pair: string) => (
                           <Badge key={pair} variant="outline" className="text-xs">
                             {pair}
                           </Badge>

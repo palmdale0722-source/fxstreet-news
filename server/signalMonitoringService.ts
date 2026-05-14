@@ -44,8 +44,8 @@ export interface TechnicalIndicators {
 // ─── Create Monitoring Task ─────────────────────────────────────────────────
 
 export async function enterSignalMonitoring(data: {
-  signalId: bigint;
-  userId: bigint;
+  signalId: number;
+  userId: number;
   monitoredPairs: string[];
   confirmationStrategy: ConfirmationStrategy;
 }) {
@@ -53,7 +53,7 @@ export async function enterSignalMonitoring(data: {
     // 1. 直接通过 ID 查询信号，避免分页查找遗漏
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const signalRows = await db.select().from(signals).where(eq(signals.id, Number(data.signalId))).limit(1);
+    const signalRows = await db.select().from(signals).where(eq(signals.id, data.signalId)).limit(1);
     const signal = signalRows[0];
     if (!signal) {
       throw new Error('Signal not found');
@@ -88,7 +88,7 @@ export async function enterSignalMonitoring(data: {
 
 // ─── Check Monitoring Conditions ────────────────────────────────────────────
 
-export async function checkMonitoringConditions(monitorId: bigint) {
+export async function checkMonitoringConditions(monitorId: number) {
   try {
     // 1. 获取监控任务
     const monitor = await getSignalMonitor(monitorId);
@@ -104,7 +104,7 @@ export async function checkMonitoringConditions(monitorId: bigint) {
       const userId = monitor.userId;
       await createAlert({
         monitorId,
-        checkpointId: BigInt(0),
+        checkpointId: 0,
         pair: 'N/A',
         userId,
         alertType: 'expired',
@@ -134,7 +134,7 @@ export async function checkMonitoringConditions(monitorId: bigint) {
 }
 
 async function checkPairConfirmation(
-  monitorId: bigint,
+  monitorId: number,
   pair: string,
   strategy: ConfirmationStrategy
 ) {
@@ -352,10 +352,10 @@ async function getTechnicalIndicators(pair: string): Promise<TechnicalIndicators
 // ─── Send Confirmation Alert ────────────────────────────────────────────────
 
 async function sendConfirmationAlert(
-  userId: bigint,
+  userId: number,
   data: {
-    monitorId: bigint;
-    checkpointId: bigint;
+    monitorId: number;
+    checkpointId: number;
     pair: string;
     currentPrice: number;
     technicalData: TechnicalIndicators;

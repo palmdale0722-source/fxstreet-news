@@ -572,7 +572,7 @@ function EnterMonitoringDialog({ signal, isOpen, onClose }: {
       return;
     }
     enterMonitoringMutation.mutate({
-      signalId: BigInt(signal.id),
+      signalId: signal.id,
       monitoredPairs: selectedPairs,
       confirmationStrategy: {
         priceConfirmation: {
