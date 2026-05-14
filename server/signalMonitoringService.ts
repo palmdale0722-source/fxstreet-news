@@ -8,8 +8,10 @@ import {
   updateMonitorStatus,
   getAllActiveMonitors,
 } from './signalMonitoringDb';
-import { getSignals } from './db';
+import { getDb } from './db';
 import { notifyOwner } from './_core/notification';
+import { signals } from '../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -48,9 +50,11 @@ export async function enterSignalMonitoring(data: {
   confirmationStrategy: ConfirmationStrategy;
 }) {
   try {
-    // 1. 获取原始信号
-    const result = await getSignals({ page: 1, pageSize: 100 });
-    const signal = result.items.find((s: any) => s.id === data.signalId);
+    // 1. 直接通过 ID 查询信号，避免分页查找遗漏
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const signalRows = await db.select().from(signals).where(eq(signals.id, Number(data.signalId))).limit(1);
+    const signal = signalRows[0];
     if (!signal) {
       throw new Error('Signal not found');
     }
