@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, cache_key, updated_at, created_at FROM currency_strength_cache ORDER BY updated_at DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT id, cache_key, updated_at, created_at FROM currency_strength_cache ORDER BY updated_at DESC LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cache_key' in 'field list'"
+  ]
+}

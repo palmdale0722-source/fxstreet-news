@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, generatedAt, updatedAt FROM currency_strength_cache ORDER BY updatedAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT id, generatedAt, updatedAt FROM currency_strength_cache ORDER BY updatedAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1140005",
+      "generatedAt": "2026-05-14 12:01:28",
+      "updatedAt": "2026-05-14 12:01:27"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tgeneratedAt\tupdatedAt\n1140005\t2026-05-14 12:01:28\t2026-05-14 12:01:27\n",
+  "stderr": "",
+  "execution_time_ms": 1732
+}

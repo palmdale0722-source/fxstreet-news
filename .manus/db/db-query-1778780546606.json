@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COUNT(*) as total, MIN(publishedAt) as oldest, MAX(publishedAt) as newest FROM tv_ideas;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT COUNT(*) as total, MIN(publishedAt) as oldest, MAX(publishedAt) as newest FROM tv_ideas;",
+  "rows": [
+    {
+      "total": "6071",
+      "oldest": "2026-03-18 12:39:13",
+      "newest": "2026-05-14 17:39:47"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\toldest\tnewest\n6071\t2026-03-18 12:39:13\t2026-05-14 17:39:47\n",
+  "stderr": "",
+  "execution_time_ms": 1718
+}

@@ -1,0 +1,14 @@
+{
+  "query": "SELECT COUNT(*) as total, MAX(createdAt) as lastAnalyzed FROM tv_idea_analyses;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT COUNT(*) as total, MAX(createdAt) as lastAnalyzed FROM tv_idea_analyses;",
+  "rows": [
+    {
+      "total": "5316",
+      "lastAnalyzed": "2026-05-14 17:23:40"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tlastAnalyzed\n5316\t2026-05-14 17:23:40\n",
+  "stderr": "",
+  "execution_time_ms": 1866
+}

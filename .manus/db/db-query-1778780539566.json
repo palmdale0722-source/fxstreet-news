@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, title, publishedAt, createdAt FROM tv_ideas ORDER BY publishedAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 43pHZH57f8CsvmH.root --database cSHx67NTiqWRWuwYCEpu4V --execute SELECT id, title, publishedAt, createdAt FROM tv_ideas ORDER BY publishedAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "5460199",
+      "title": "NAS100: The 30,000 \"Blood Bath\" – Psychological Ceiling or Bull",
+      "publishedAt": "2026-05-14 17:39:47",
+      "createdAt": "2026-05-14 17:42:12"
+    },
+    {
+      "id": "5460193",
+      "title": "AUDUSD LOCAL LONG|",
+      "publishedAt": "2026-05-14 16:54:40",
+      "createdAt": "2026-05-14 17:15:46"
+    },
+    {
+      "id": "5460194",
+      "title": "GOLD MARKET ANALYSIS - 4730 HOLDING AND AWAITING BREAKOUT",
+      "publishedAt": "2026-05-14 16:46:31",
+      "createdAt": "2026-05-14 17:15:47"
+    },
+    {
+      "id": "5460195",
+      "title": "Nikkei has doubled in the past year!!!",
+      "publishedAt": "2026-05-14 16:46:28",
+      "createdAt": "2026-05-14 17:15:47"
+    },
+    {
+      "id": "5460183",
+      "title": "GBPUSD buys also lining up!",
+      "publishedAt": "2026-05-14 16:21:28",
+      "createdAt": "2026-05-14 16:21:37"
+    },
+    {
+      "id": "5460184",
+      "title": "GBPCHF lining up for a buy??",
+      "publishedAt": "2026-05-14 16:20:23",
+      "createdAt": "2026-05-14 16:21:38"
+    },
+    {
+      "id": "5460185",
+      "title": "NZDUSD buys!",
+      "publishedAt": "2026-05-14 16:19:38",
+      "createdAt": "2026-05-14 16:21:38"
+    },
+    {
+      "id": "5460176",
+      "title": "Gold 5000$ Lv1",
+      "publishedAt": "2026-05-14 16:07:31",
+      "createdAt": "2026-05-14 16:17:04"
+    },
+    {
+      "id": "5460177",
+      "title": "Dollar Strength Hits Gold—Here’s My Move for the Rebound.",
+      "publishedAt": "2026-05-14 15:53:33",
+      "createdAt": "2026-05-14 16:17:09"
+    },
+    {
+      "id": "5460178",
+      "title": "$BULL is knocking on the ceiling.",
+      "publishedAt": "2026-05-14 15:49:50",
+      "createdAt": "2026-05-14 16:17:12"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tpublishedAt\tcreatedAt\n5460199\tNAS100: The 30,000 \"Blood Bath\" – Psychological Ceiling or Bull\t2026-05-14 17:39:47\t2026-05-14 17:42:12\n5460193\tAUDUSD LOCAL LONG|\t2026-05-14 16:54:40\t2026-05-14 17:15:46\n5460194\tGOLD MARKET ANALYSIS - 4730 HOLDING AND AWAITING BREAKOUT\t2026-05-14 16:46:31\t2026-05-14 17:15:47\n5460195\tNikkei has doubled in the past year!!!\t2026-05-14 16:46:28\t2026-05-14 17:15:47\n5460183\tGBPUSD buys also lining up!\t2026-05-14 16:21:28\t2026-05-14 16:21:37\n5460184\tGBPCHF lining up for a buy??\t2026-05-14 16:20:23\t2026-05-14 16:21:38\n5460185\tNZDUSD buys!\t2026-05-14 16:19:38\t2026-05-14 16:21:38\n5460176\tGold 5000$ Lv1\t2026-05-14 16:07:31\t2026-05-14 16:17:04\n5460177\tDollar Strength Hits Gold—Here’s My Move for the Rebound.\t2026-05-14 15:53:33\t2026-05-14 16:17:09\n5460178\t$BULL is knocking on the ceiling.\t2026-05-14 15:49:50\t2026-05-14 16:17:12\n",
+  "stderr": "",
+  "execution_time_ms": 1885
+}

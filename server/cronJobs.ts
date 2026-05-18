@@ -17,8 +17,8 @@ let isImapRunning = false;
 let isStrengthRunning = false;
 let isHealthCheckRunning = false;
 
-// 每 4 小时执行一次货币强弱矩阵更新
-const STRENGTH_MATRIX_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// 每 6 小时执行一次货币强弱矩阵更新（即使服务器重启也最多落后 6 小时）
+const STRENGTH_MATRIX_INTERVAL_MS = 6 * 60 * 60 * 1000;
 // 第 1 组（USD/EUR/JPY/GBP）在偶数小时（0、4、8、12、16、20）
 const ALL_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "AUD", "NZD", "CAD", "CHF"];
 // 第 2 组（AUD/NZD/CAD/CHF）在奇数小时（2、6、10、14、18、22）
@@ -46,31 +46,39 @@ export function startCronJobs() {
   startPriceAlertMonitor();
 }
 
-// 启动每天货币强弱矩阵更新（每天上午 8 点）
-function startDailyStrengthMatrixUpdates() {
-  console.log("[StrengthMatrix] Starting daily updates (every 24 hours at 08:00)");
+// 启动货币强弱矩阵更新（每 6 小时一次，启动时检查新鲜度）
+async function startDailyStrengthMatrixUpdates() {
+  console.log("[StrengthMatrix] Starting updates (every 6h, with startup freshness check)");
 
-  // 计算距离下一个上午 8 点的延迟
-  const now = new Date();
-  const nextRun = new Date(now);
-  nextRun.setHours(8, 0, 0, 0);
-  
-  // 如果已经超过今天的 8 点，改为明天 8 点
-  if (nextRun <= now) {
-    nextRun.setDate(nextRun.getDate() + 1);
+  // 启动时检查：如果数据超过 6 小时没更新，立即触发
+  try {
+    const cache = await getCurrencyStrengthCache();
+    if (!cache) {
+      console.log("[StrengthMatrix] No cache found, triggering immediate update...");
+      setTimeout(() => safeRunStrengthMatrix("startup-no-cache", ALL_CURRENCIES).catch(console.error), 5000);
+    } else {
+      const updatedAt = new Date((cache as any).updatedAt ?? Date.now());
+      const hoursSince = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60);
+      console.log(`[StrengthMatrix] Last update: ${updatedAt.toISOString()} (${hoursSince.toFixed(1)}h ago)`);
+      if (hoursSince > 6) {
+        console.log(`[StrengthMatrix] Data stale (${hoursSince.toFixed(1)}h > 6h), triggering immediate update...`);
+        setTimeout(() => safeRunStrengthMatrix("startup-stale", ALL_CURRENCIES).catch(console.error), 5000);
+      } else {
+        const nextInHours = (6 - hoursSince).toFixed(1);
+        console.log(`[StrengthMatrix] Data is fresh, next scheduled update in ${nextInHours}h`);
+      }
+    }
+  } catch (e) {
+    console.error("[StrengthMatrix] Startup freshness check failed:", e);
+    // 检查失败时也触发一次更新，确保数据不会长期过期
+    setTimeout(() => safeRunStrengthMatrix("startup-check-failed", ALL_CURRENCIES).catch(console.error), 10000);
   }
-  
-  const delayToFirstRun = nextRun.getTime() - now.getTime();
-  console.log(`[StrengthMatrix] Next update in ${Math.round(delayToFirstRun / 1000 / 60)} minutes`);
 
-  // 第一次更新
-  setTimeout(() => {
-    safeRunStrengthMatrix("scheduled", ALL_CURRENCIES).catch(console.error);
-    // 之后每 24 小时更新
-    setInterval(() => {
-      safeRunStrengthMatrix("scheduled", ALL_CURRENCIES).catch(console.error);
-    }, STRENGTH_MATRIX_INTERVAL_MS);
-  }, delayToFirstRun);
+  // 之后每 6 小时定期更新（即使服务器重启，最多落后 6 小时）
+  setInterval(() => {
+    safeRunStrengthMatrix("scheduled-6h", ALL_CURRENCIES).catch(console.error);
+  }, STRENGTH_MATRIX_INTERVAL_MS);
+  console.log(`[StrengthMatrix] Recurring update every 6h scheduled`);
 }
 
 // 启动每周自检定时任务（每周一 09:00 北京时间 = UTC 01:00）
